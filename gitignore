@@ -1,0 +1,69 @@
+# =============== #
+# Unity generated #
+# =============== #
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+UserSettings/
+
+# ======================= #
+# Visual Studio / Rider   #
+# ======================= #
+.vscode/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+
+# Rider specific
+.idea/
+*.sln.iml
+
+# ================= #
+# OS generated files #
+# ================= #
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# ========== #
+# Crash Logs #
+# ========== #
+sysinfo.txt
+
+# ================== #
+# Unity Asset Store #
+# ================== #
+*.unitypackage
+
+# ================== #
+# Build Artifacts   #
+# ================== #
+*.apk
+*.aab
+*.xcodeproj
+*.xcworkspace
+*.xcuserstate
+
+# ================== #
+# Git Large File Storage #
+# ================== #
+# (Optional — only if you use Git LFS for big assets)
+# *.psd
+# *.fbx
+# *.png
+# *.wav
