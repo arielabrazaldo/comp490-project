@@ -1,1 +1,1 @@
-# comp490-project
+# BoardSmith
