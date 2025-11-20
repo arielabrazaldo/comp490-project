@@ -126,49 +126,17 @@ public class GameSetupManager : MonoBehaviour
             GameObject tile = Instantiate(tilePrefab, tileParent);
             generatedTiles.Add(tile);
 
-            /*
-            // Read parent panel width
-            RectTransform parentRT = tileParent.GetComponent<RectTransform>();
-            Rect rect = RectTransformUtility.PixelAdjustRect(parentRT, tileParent.GetComponentInParent<Canvas>());
-            float parentWidth = parentRT.rect.width;
+            // --- AUTO-SHRINK WIDTH + CENTERED SPACING ------------------------------------------------------------------
 
-            // Read tile width from prefab
-            RectTransform prefabRT = tilePrefab.GetComponent<RectTransform>();
-            float tileWidth = prefabRT.rect.width;
-
-            Debug.Log("Parent width = " + parentWidth);
-            Debug.Log("Tile width = " + tileWidth);
-
-
-            // Calculate spacing so tiles fill entire parent width
-            float usableWidth = parentWidth - tileWidth;
-            float spacing = usableWidth / (configuredTileCount - 1);
-
-            // Position tiles perfectly across screen
-            RectTransform rt = tile.GetComponent<RectTransform>();
-            if (rt != null)
-            {
-                float debugOffset = 800f; // try -400, +400 after testing
-                float x = debugOffset + (-parentWidth / 2f) + (tileWidth / 2f) + (i - 1) * spacing;
-                float y = 0f;
-                rt.anchoredPosition = new Vector2(x, y);
-
-            }
-            */
-
-
-
-            // --- AUTO-SHRINK WIDTH + CENTERED SPACING ---
-
-            // 1) Parent width (the length of the row)
+            // Parent width (the length of the row)
             RectTransform parentRT = tileParent.GetComponent<RectTransform>();
             float parentWidth = parentRT.rect.width;
 
-            // 2) Original tile width from prefab
+            // Original tile width from prefab
             RectTransform prefabRT = tilePrefab.GetComponent<RectTransform>();
             float originalTileWidth = prefabRT.rect.width;
 
-            // 3) Decide how wide each tile can be so they all fit
+            // Decide how wide each tile can be so they all fit
             float tileWidth = originalTileWidth;
             float spacing = 0f;
 
@@ -195,13 +163,13 @@ public class GameSetupManager : MonoBehaviour
                 spacing = 0f;
             }
 
-            // 4) Apply NEW width to the tile (WIDTH ONLY, height unchanged)
+            // Apply NEW width to the tile (WIDTH ONLY, height unchanged)
             RectTransform rt = tile.GetComponent<RectTransform>();
             if (rt != null)
             {
                 rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, tileWidth);
 
-                // 5) Position tile – KEEP your debugOffset that centers the whole row
+                // Position tile – KEEP your debugOffset that centers the whole row
                 float debugOffset = 800f; // your tuned centering value
                 float x = debugOffset
                           + (-parentWidth / 2f)
@@ -211,13 +179,7 @@ public class GameSetupManager : MonoBehaviour
                 float y = 0f;
                 rt.anchoredPosition = new Vector2(x, y);
             }
-
-
-
-
-
-
-
+            // -----------------------------------------------------------------------------------------------------------
 
             // Save reference to first tile for player spawn
             if (i == 1)
