@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
@@ -27,6 +27,10 @@ public class GameSetupManager : MonoBehaviour
     public GameObject tilePrefab;
     public Transform tileParent; // Parent container for tiles
     public Color[] tileColors; // Tile color pattern
+
+    [Header("Board Layout (2D UI)")]
+    public float tileSpacing = 150f; // distance between tile centers
+    public Vector2 startAnchoredPosition = new Vector2(-600f, 0f);
 
     [Header("Player Tokens")]
     public GameObject[] playerTokenPrefabs; // Different colored tokens
@@ -58,6 +62,8 @@ public class GameSetupManager : MonoBehaviour
 
     private void Start()
     {
+        Debug.Log("GenerateBoard() was called");
+
         ValidateReferences();
         
         // Hide the board initially
@@ -120,6 +126,99 @@ public class GameSetupManager : MonoBehaviour
             GameObject tile = Instantiate(tilePrefab, tileParent);
             generatedTiles.Add(tile);
 
+            /*
+            // Read parent panel width
+            RectTransform parentRT = tileParent.GetComponent<RectTransform>();
+            Rect rect = RectTransformUtility.PixelAdjustRect(parentRT, tileParent.GetComponentInParent<Canvas>());
+            float parentWidth = parentRT.rect.width;
+
+            // Read tile width from prefab
+            RectTransform prefabRT = tilePrefab.GetComponent<RectTransform>();
+            float tileWidth = prefabRT.rect.width;
+
+            Debug.Log("Parent width = " + parentWidth);
+            Debug.Log("Tile width = " + tileWidth);
+
+
+            // Calculate spacing so tiles fill entire parent width
+            float usableWidth = parentWidth - tileWidth;
+            float spacing = usableWidth / (configuredTileCount - 1);
+
+            // Position tiles perfectly across screen
+            RectTransform rt = tile.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                float debugOffset = 800f; // try -400, +400 after testing
+                float x = debugOffset + (-parentWidth / 2f) + (tileWidth / 2f) + (i - 1) * spacing;
+                float y = 0f;
+                rt.anchoredPosition = new Vector2(x, y);
+
+            }
+            */
+
+
+
+            // --- AUTO-SHRINK WIDTH + CENTERED SPACING ---
+
+            // 1) Parent width (the length of the row)
+            RectTransform parentRT = tileParent.GetComponent<RectTransform>();
+            float parentWidth = parentRT.rect.width;
+
+            // 2) Original tile width from prefab
+            RectTransform prefabRT = tilePrefab.GetComponent<RectTransform>();
+            float originalTileWidth = prefabRT.rect.width;
+
+            // 3) Decide how wide each tile can be so they all fit
+            float tileWidth = originalTileWidth;
+            float spacing = 0f;
+
+            if (configuredTileCount > 1)
+            {
+                float minSpacing = 4f; // small gap between tiles
+
+                // Max total width available for all tiles (after reserving minimum gaps)
+                float maxWidthForTiles = parentWidth - minSpacing * (configuredTileCount - 1);
+
+                // If tiles don’t fit at original size, shrink width
+                if (maxWidthForTiles < tileWidth * configuredTileCount)
+                {
+                    tileWidth = maxWidthForTiles / configuredTileCount;
+                }
+
+                // Recalculate actual spacing with the (possibly) shrunken width
+                spacing = (parentWidth - tileWidth * configuredTileCount) / (configuredTileCount - 1);
+            }
+            else
+            {
+                // Only one tile – just clamp width to parent
+                tileWidth = Mathf.Min(originalTileWidth, parentWidth);
+                spacing = 0f;
+            }
+
+            // 4) Apply NEW width to the tile (WIDTH ONLY, height unchanged)
+            RectTransform rt = tile.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, tileWidth);
+
+                // 5) Position tile – KEEP your debugOffset that centers the whole row
+                float debugOffset = 800f; // your tuned centering value
+                float x = debugOffset
+                          + (-parentWidth / 2f)
+                          + (tileWidth / 2f)
+                          + (i - 1) * (tileWidth + spacing);
+
+                float y = 0f;
+                rt.anchoredPosition = new Vector2(x, y);
+            }
+
+
+
+
+
+
+
+
             // Save reference to first tile for player spawn
             if (i == 1)
             {
@@ -134,7 +233,6 @@ public class GameSetupManager : MonoBehaviour
             }
             else
             {
-                // Try TextMeshPro as fallback
                 TextMeshProUGUI tmpText = tile.GetComponentInChildren<TextMeshProUGUI>();
                 if (tmpText != null)
                 {
