@@ -21,7 +21,7 @@ public class UIManager : MonoBehaviour
 
     [Header("Panels")]
     [SerializeField] private GameObject mainMenuPanel;
-    [SerializeField] private GameObject gameSetupPanel;
+    [SerializeField] private GameObject diceRaceSetupPanel;
     [SerializeField] private GameObject lobbyPanel;
     [SerializeField] private GameObject joinPanel;
     [SerializeField] private GameObject gamePanel; // New panel for the actual game
@@ -31,7 +31,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button joinButton;
     [SerializeField] private Button exitButton;
 
-    [Header("Game Setup Panel")]
+    [Header("Dice Race Setup Panel")]
     [SerializeField] private TMP_InputField tileCountInput;
     [SerializeField] private TMP_InputField playerCountInput;
     [SerializeField] private Button createLobbyButton;
@@ -214,7 +214,7 @@ public class UIManager : MonoBehaviour
     private void ValidateUIReferences()
     {
         if (mainMenuPanel == null) Debug.LogError("MainMenuPanel is not assigned in UIManager!");
-        if (gameSetupPanel == null) Debug.LogError("GameSetupPanel is not assigned in UIManager!");
+        if (diceRaceSetupPanel == null) Debug.LogError("DiceRacePanel is not assigned in UIManager!");
         if (lobbyPanel == null) Debug.LogError("LobbyPanel is not assigned in UIManager!");
         if (joinPanel == null) Debug.LogError("JoinPanel is not assigned in UIManager!");
         if (gamePanel == null) Debug.LogError("GamePanel is not assigned in UIManager!");
@@ -259,10 +259,11 @@ public class UIManager : MonoBehaviour
         if (leaveGameButton != null) leaveGameButton.onClick.AddListener(OnLeaveGameClicked);
     }
 
+    #region Game Panels
     private void HideAllPanels()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-        if (gameSetupPanel != null) gameSetupPanel.SetActive(false);
+        if (diceRaceSetupPanel != null) diceRaceSetupPanel.SetActive(false);
         if (lobbyPanel != null) lobbyPanel.SetActive(false);
         if (joinPanel != null) joinPanel.SetActive(false);
         if (gamePanel != null) gamePanel.SetActive(false);
@@ -282,10 +283,10 @@ public class UIManager : MonoBehaviour
     private void ShowGameSetup()
     {
         HideAllPanels();
-        if (gameSetupPanel != null) 
+        if (diceRaceSetupPanel != null) 
         {
-            gameSetupPanel.SetActive(true);
-            Debug.Log("Showing Game Setup Panel");
+            diceRaceSetupPanel.SetActive(true);
+            Debug.Log("Showing Dice Race Setup Panel");
             
             // player and tile space prompts
             if (tileCountInput != null) tileCountInput.text = "20";
@@ -293,7 +294,7 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("GameSetupPanel is NULL! Please assign it in the Inspector.");
+            Debug.LogError("DiceRaceSetupPanel is NULL! Please assign it in the Inspector.");
         }
         ClearStatus();
     }
@@ -342,9 +343,9 @@ public class UIManager : MonoBehaviour
         }
         ClearStatus();
     }
+    #endregion
 
     #region Game Panel Methods
-
     private void UpdateCurrentPlayerDisplay(int currentPlayerId)
     {
         if (currentPlayerText != null)
@@ -410,7 +411,6 @@ public class UIManager : MonoBehaviour
         await LobbyManager.Instance.LeaveLobby();
         ShowMainMenu();
     }
-
     #endregion
 
     private void SetStatus(string message, Color? color = null)

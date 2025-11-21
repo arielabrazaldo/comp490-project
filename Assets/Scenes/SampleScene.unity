@@ -1815,12 +1815,12 @@ GameObject:
   - component: {fileID: 569271570}
   - component: {fileID: 569271569}
   m_Layer: 0
-  m_Name: GameSetupPanel
+  m_Name: DiceRaceSetupPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &569271568
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3969,7 +3969,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1618046484
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4182,7 +4182,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1640775360
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4654,8 +4654,12 @@ MonoBehaviour:
   tilePrefab: {fileID: 8193056175359503390, guid: 6b805feeb0ef3b849a2d5b66a2e9ebd2, type: 3}
   tileParent: {fileID: 427690483}
   tileColors:
-  - {r: 1, g: 0, b: 1, a: 1}
-  - {r: 0.3333333, g: 0.4196079, b: 0.1843137, a: 1}
+  - {r: 1, g: 0, b: 0, a: 1}
+  - {r: 1, g: 0.3882353, b: 0.2784314, a: 1}
+  - {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  - {r: 0, g: 1, b: 0, a: 1}
+  - {r: 0, g: 0, b: 1, a: 1}
+  - {r: 0.5411765, g: 0.1686275, b: 0.8862746, a: 1}
   tileSpacing: 100
   startAnchoredPosition: {x: -600, y: -250}
   playerTokenPrefabs:
@@ -5217,7 +5221,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
   mainMenuPanel: {fileID: 1640775359}
-  gameSetupPanel: {fileID: 569271567}
+  diceRaceSetupPanel: {fileID: 569271567}
   lobbyPanel: {fileID: 1813386862}
   joinPanel: {fileID: 941264664}
   gamePanel: {fileID: 1618046483}
