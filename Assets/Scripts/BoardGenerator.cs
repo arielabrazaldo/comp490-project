@@ -5,6 +5,19 @@ using System.Collections.Generic;
 
 public class BoardGenerator : MonoBehaviour
 {
+    private static BoardGenerator instance;
+    public static BoardGenerator Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindFirstObjectByType<BoardGenerator>();
+            }
+            return instance;
+        }
+    }
+
     [Header("Board Setup")]
     public GameObject tilePrefab;
     public Transform tileParent; // assign the parent container (usually this object)
@@ -30,6 +43,19 @@ public class BoardGenerator : MonoBehaviour
 
     private int numberOfPlayers = 1;
 
+    private void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
+
     private void Start()
     {
         startButton.onClick.AddListener(OnStartButtonClicked);
@@ -41,7 +67,7 @@ public class BoardGenerator : MonoBehaviour
 
     public void OnStartButtonClicked()
     {
-        if (int.TryParse(tileInputField.text,out int result))
+        if (int.TryParse(tileInputField.text, out int result))
         {
             totalTiles = result;
         }
@@ -181,6 +207,14 @@ public class BoardGenerator : MonoBehaviour
     public bool HasPlayerTokens()
     {
         return playerTokens != null && playerTokens.Count > 0;
+    }
+
+    /// <summary>
+    /// Get the board parent transform (for showing/hiding board)
+    /// </summary>
+    public Transform GetBoardParent()
+    {
+        return tileParent;
     }
 }
 
