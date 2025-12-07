@@ -369,6 +369,26 @@ public class LobbyManager : MonoBehaviour
     {
         return currentLobby?.AvailableSlots ?? 0;
     }
+    
+    /// <summary>
+    /// Get the current lobby object
+    /// </summary>
+    public async Task<Lobby> GetCurrentLobby()
+    {
+        if (currentLobby != null)
+        {
+            try
+            {
+                // Refresh lobby data
+                currentLobby = await LobbyService.Instance.GetLobbyAsync(currentLobby.Id);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error refreshing lobby: {e.Message}");
+            }
+        }
+        return currentLobby;
+    }
 
     private void OnDestroy()
     {
