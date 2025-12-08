@@ -4,6 +4,12 @@ using TMPro;
 using System.Collections.Generic;
 using System.Collections;
 
+public enum GameMode
+{
+    DiceRace,
+    Monopoly
+}
+
 public class UIManager : MonoBehaviour
 {
     private static UIManager instance;
@@ -19,6 +25,8 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    private GameMode currentGameMode = GameMode.DiceRace;
+
     [Header("Panels")]
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject diceRaceSetupPanel;
@@ -30,6 +38,11 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button hostButton;
     [SerializeField] private Button joinButton;
     [SerializeField] private Button exitButton;
+
+    [Header("Game Mode Select Panel")]
+    [SerializeField] private Button diceRaceModeButton;
+    // Add other game modes here later
+
 
     [Header("Dice Race Setup Panel")]
     [SerializeField] private TMP_InputField tileCountInput;

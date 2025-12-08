@@ -255,7 +255,7 @@ public class GameSetupManager : MonoBehaviour
                 float yOffset = ((rows - 1) / 2f - p / cols) * spacing;
 
                 rt.anchoredPosition = new Vector2(xOffset, yOffset);
-                rt.localScale = Vector3.one * 0.1f; // Scale down for visibility
+                rt.localScale = Vector3.one * 0.4f; // Scale down for visibility
             }
 
             playerPositions[p] = 0; // All players start at position 0
