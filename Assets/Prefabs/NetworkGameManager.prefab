@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 7151185768486182474}
   - component: {fileID: 4855809588993438870}
   - component: {fileID: 262037321785519998}
-  - component: {fileID: -969602678155672726}
   m_Layer: 0
   m_Name: NetworkGameManager
   m_TagString: Untagged
@@ -46,7 +45,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2159794742
+  GlobalObjectIdHash: 39849887
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -71,17 +70,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ad2f0d25972fc54091dbe16a67dbd48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkGameManager
-  ShowTopMostFoldoutHeaderGroup: 1
---- !u!114 &-969602678155672726
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076940491678888528}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b238a51323fe3a24fa13c44e3d43db4b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MonopolyGameManager
   ShowTopMostFoldoutHeaderGroup: 1

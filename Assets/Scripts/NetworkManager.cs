@@ -44,15 +44,11 @@ public class NetworkManager : MonoBehaviour
         else
         {
             Destroy(gameObject);
-            return;
         }
 
         SetupNetcodeManager();
     }
 
-    /// <summary>
-    /// Setup Unity's NetworkManager component and transport
-    /// </summary>
     private void SetupNetcodeManager()
     {
         // First, try to get the existing Unity NetworkManager component
@@ -112,9 +108,6 @@ public class NetworkManager : MonoBehaviour
         await InitializeUnityServices();
     }
 
-    /// <summary>
-    /// Initialize Unity Services (Authentication, Relay, Lobbies)
-    /// </summary>
     private async Task InitializeUnityServices()
     {
         try
@@ -137,10 +130,6 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Create a Relay server allocation and start hosting
-    /// </summary>
-    /// <returns>Join code for other players to connect</returns>
     public async Task<string> CreateRelay()
     {
         try
@@ -150,12 +139,11 @@ public class NetworkManager : MonoBehaviour
             {
                 Debug.Log("Already listening, shutting down first...");
                 Shutdown();
-                await Task.Delay(500);
+                await System.Threading.Tasks.Task.Delay(500);
             }
 
             Debug.Log("Creating Relay allocation...");
-            // Create relay allocation for up to 4 players (host + 3 clients)
-            // Note: Allocation count is connections, so 4 = 1 host + 3 clients
+            // Fixed: Match relay capacity with lobby capacity (4 players)
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(4);
             JoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
@@ -169,7 +157,7 @@ public class NetworkManager : MonoBehaviour
                 return null;
             }
             
-            // Configure Unity Transport with relay data
+            // Use Unity Transport's SetHostRelayData method with proper type casting
             transport.SetHostRelayData(
                 allocation.RelayServer.IpV4,
                 (ushort)allocation.RelayServer.Port,
@@ -205,11 +193,6 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Join an existing relay server using a join code
-    /// </summary>
-    /// <param name="joinCode">The relay join code provided by the host</param>
-    /// <returns>True if successfully connected</returns>
     public async Task<bool> JoinRelay(string joinCode)
     {
         try
@@ -227,7 +210,7 @@ public class NetworkManager : MonoBehaviour
             {
                 Debug.Log("Already listening, shutting down first...");
                 Shutdown();
-                await Task.Delay(1000); // Give more time for shutdown
+                await System.Threading.Tasks.Task.Delay(1000); // Give more time for shutdown
             }
 
             JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
@@ -247,7 +230,7 @@ public class NetworkManager : MonoBehaviour
                 return false;
             }
             
-            // Configure Unity Transport with relay client data
+            // Use Unity Transport's SetClientRelayData method with proper type casting
             transport.SetClientRelayData(
                 allocation.RelayServer.IpV4,
                 (ushort)allocation.RelayServer.Port,
@@ -264,12 +247,12 @@ public class NetworkManager : MonoBehaviour
                 Debug.Log($"Client started successfully, joining relay with code: {joinCode}");
                 Debug.Log($"Network Manager status - IsClient: {netcodeManager.IsClient}, IsConnectedClient: {netcodeManager.IsConnectedClient}, IsListening: {netcodeManager.IsListening}");
                 
-                // Wait for connection to establish
+                // Wait a moment for connection to establish
                 float timeout = 10f;
                 float elapsed = 0f;
                 while (!netcodeManager.IsConnectedClient && elapsed < timeout)
                 {
-                    await Task.Delay(100);
+                    await System.Threading.Tasks.Task.Delay(100);
                     elapsed += 0.1f;
                 }
                 
@@ -317,33 +300,21 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Check if the network is connected (either as host or client)
-    /// </summary>
     public bool IsConnected()
     {
         return netcodeManager != null && (netcodeManager.IsHost || netcodeManager.IsConnectedClient);
     }
 
-    /// <summary>
-    /// Check if this instance is the host
-    /// </summary>
     public bool IsHost()
     {
         return netcodeManager != null && netcodeManager.IsHost;
     }
 
-    /// <summary>
-    /// Check if this instance is a client (not the host)
-    /// </summary>
     public bool IsClient()
     {
         return netcodeManager != null && netcodeManager.IsClient;
     }
 
-    /// <summary>
-    /// Shutdown the network connection
-    /// </summary>
     public void Shutdown()
     {
         if (netcodeManager != null && netcodeManager.IsListening)
@@ -358,7 +329,7 @@ public class NetworkManager : MonoBehaviour
 
     /// <summary>
     /// Force a complete cleanup and reset of the network manager
-    /// Useful when switching between host/client modes
+    /// This is useful when switching between host/client modes
     /// </summary>
     public async Task ForceReset()
     {
@@ -370,7 +341,7 @@ public class NetworkManager : MonoBehaviour
         }
         
         // Wait for shutdown to complete
-        await Task.Delay(1000);
+        await System.Threading.Tasks.Task.Delay(1000);
         
         // Clear any cached data
         JoinCode = null;
