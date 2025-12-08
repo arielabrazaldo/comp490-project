@@ -53,6 +53,7 @@ public class UIManager : MonoBehaviour
 
     [Header("Lobby Panel")]
     [SerializeField] private TextMeshProUGUI lobbyCodeText;
+    [SerializeField] private TextMeshProUGUI lobbyTitleText; // NEW: Dynamic lobby title
     [SerializeField] private Transform playerListContent;
     [SerializeField] private GameObject playerListItemPrefab;
     [SerializeField] private Button startGameButton;
@@ -388,6 +389,7 @@ public class UIManager : MonoBehaviour
         if (leaveLobbyButton == null) Debug.LogError("LeaveLobbyButton is not assigned in UIManager!");
         if (joinCodeInput == null) Debug.LogError("JoinCodeInput is not assigned in UIManager!");
         if (lobbyCodeText == null) Debug.LogError("LobbyCodeText is not assigned in UIManager!");
+        if (lobbyTitleText == null) Debug.LogWarning("LobbyTitleText is not assigned (optional - defaults to 'BoardSmith Lobby')");
         if (playerListContent == null) Debug.LogError("PlayerListContent is not assigned in UIManager!");
         if (playerListItemPrefab == null) Debug.LogError("PlayerListItemPrefab is not assigned in UIManager!");
         if (statusText == null) Debug.LogError("StatusText is not assigned in UIManager!");
@@ -544,8 +546,43 @@ public class UIManager : MonoBehaviour
             {
                 startGameButton.gameObject.SetActive(LobbyManager.Instance.IsLobbyHost());
             }
+            
+            // Update lobby title based on game mode
+            UpdateLobbyTitle();
         }
         ClearStatus();
+    }
+    
+    /// <summary>
+    /// Updates the lobby title text based on the current game mode
+    /// </summary>
+    private void UpdateLobbyTitle()
+    {
+        if (lobbyTitleText != null)
+        {
+            string gameModeTitle = GetGameModeDisplayName();
+            lobbyTitleText.text = $"{gameModeTitle} Lobby";
+            Debug.Log($"Updated lobby title to: {lobbyTitleText.text}");
+        }
+    }
+    
+    /// <summary>
+    /// Gets the display name for the current game mode
+    /// </summary>
+    private string GetGameModeDisplayName()
+    {
+        if (isBattleshipsMode)
+        {
+            return "Battleships";
+        }
+        else if (isMonopolyMode)
+        {
+            return "Monopoly";
+        }
+        else
+        {
+            return "Dice Race";
+        }
     }
 
     private void ShowJoinPanel()
@@ -1045,7 +1082,6 @@ public class UIManager : MonoBehaviour
 									{
 										propertiesList += " (Mortgaged)";
 									}
-									
 									propertiesList += "\n";
 								}
 							}
@@ -1228,7 +1264,7 @@ public class UIManager : MonoBehaviour
                     lobbyCodeText.text = $"Lobby Code: {lobbyCode}";
                 }
                 SetStatusSuccess($"Monopoly lobby created! Code: {lobbyCode}");
-                ShowLobby();
+                ShowLobby(); // This will now update the lobby title
                 UpdatePlayerList();
             }
             else
@@ -1356,7 +1392,7 @@ public class UIManager : MonoBehaviour
                 SetStatusInfo("Finalizing connection...");
                 await System.Threading.Tasks.Task.Delay(1000);
                 
-                ShowLobby();
+                ShowLobby(); // This will now update the lobby title based on detected mode
                 UpdatePlayerList();
                 SetStatusSuccess("Connected to lobby!");
             }
@@ -1751,7 +1787,7 @@ public class UIManager : MonoBehaviour
                         lobbyCodeText.text = $"Lobby Code: {lobbyCode}";
                     }
                     SetStatusSuccess($"Monopoly lobby created! Code: {lobbyCode}");
-                    ShowLobby();
+                    ShowLobby(); // This will update the lobby title
                     UpdatePlayerList();
                 }
                 else
@@ -1791,7 +1827,7 @@ public class UIManager : MonoBehaviour
                         lobbyCodeText.text = $"Lobby Code: {lobbyCode}";
                     }
                     SetStatusSuccess($"Dice race lobby created! Code: {lobbyCode}");
-                    ShowLobby();
+                    ShowLobby(); // This will update the lobby title
                     UpdatePlayerList();
                 }
                 else
@@ -1980,6 +2016,11 @@ public class UIManager : MonoBehaviour
             lobbyCodeText.text = $"Lobby Code: {code}";
         }
     }
+    
+    /// <summary>
+    /// Public method to update lobby title based on current game mode
+    /// </summary>
+    public void UpdateLobbyTitlePublic() => UpdateLobbyTitle();
 
     /// <summary>
     /// Public method to update player list
@@ -2061,6 +2102,9 @@ public class UIManager : MonoBehaviour
         
         if (lobbyCodeText == null) { Debug.LogError("LobbyCodeText is missing!"); missingCount++; }
         else Debug.Log("LobbyCodeText assigned");
+        
+        if (lobbyTitleText == null) { Debug.LogWarning("LobbyTitleText is missing (optional - will default to 'BoardSmith Lobby')"); }
+        else Debug.Log("LobbyTitleText assigned");
         
         if (playerListContent == null) { Debug.LogError("PlayerListContent is missing!"); missingCount++; }
         else Debug.Log("PlayerListContent assigned");

@@ -641,6 +641,9 @@ public class BattleshipsGameManager : NetworkBehaviour
             playerBoard.hasPlacedAllShips = true;
             Debug.Log($"Player {playerId} has finished placing all ships ({playerBoard.shipList.Count}/{requiredShips})");
 
+            // Notify the client to show waiting panel and hide their board
+            NotifyPlayerFinishedPlacementClientRpc(playerId);
+
             // Check if all players have finished
             if (playerBoards.Values.All(board => board.hasPlacedAllShips))
             {
@@ -713,6 +716,25 @@ public class BattleshipsGameManager : NetworkBehaviour
         // Notify all clients of the attack result
         NotifyAttackResultClientRpc(attackingPlayerId, targetPlayerId, position, (int)result);
 
+        // CRITICAL FIX: Send updated board state to the target player so they can update ship status
+        if (result == AttackResult.Hit || result == AttackResult.Sunk || result == AttackResult.Eliminated)
+        {
+            // Convert hits HashSet to array for network serialization
+            Vector2Int[] hitsArray = new Vector2Int[targetBoard.hits.Count];
+            targetBoard.hits.CopyTo(hitsArray);
+            
+            Debug.Log($"[Server] Sending {hitsArray.Length} hits to Player {targetPlayerId} for ship status update");
+            
+            // Send only to the target player
+            SyncPlayerBoardHitsClientRpc(targetPlayerId, hitsArray, new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { (ulong)targetPlayerId }
+                }
+            });
+        }
+
         // Check for game over
         if (result == AttackResult.Eliminated)
         {
@@ -770,12 +792,53 @@ public class BattleshipsGameManager : NetworkBehaviour
     [ClientRpc]
     private void NotifyShipPlacedClientRpc(int playerId, int shipTypeInt, Vector2Int startPos, bool isHorizontal)
     {
-        Debug.Log($"[Client] Player {playerId} placed ship: {(ShipType)shipTypeInt} at {startPos}");
+        Debug.Log($"[{(IsServer ? "Server" : "Client")}] NotifyShipPlacedClientRpc called for Player {playerId}, ship: {(ShipType)shipTypeInt}");
         
-        // Update UI
+        // CRITICAL FIX: Skip GAME LOGIC on server (already done in ServerRpc)
+        // But allow UI updates to proceed for host
+        if (IsServer)
+        {
+            Debug.Log($"[Server] Skipping ship data storage (already done in ServerRpc) - proceeding to UI update only");
+        }
+        else
+        {
+            // CLIENTS ONLY: Store ship data locally for ship status tracking
+            if (playerBoards.ContainsKey(playerId))
+            {
+                ShipType shipType = (ShipType)shipTypeInt;
+                int length = GetShipLength(shipType);
+                
+                // Generate ship positions
+                List<Vector2Int> shipPositions = new List<Vector2Int>();
+                for (int i = 0; i < length; i++)
+                {
+                    Vector2Int pos = isHorizontal 
+                        ? new Vector2Int(startPos.x + i, startPos.y)
+                        : new Vector2Int(startPos.x, startPos.y + i);
+                    shipPositions.Add(pos);
+                }
+                
+                // Create ship object and add to local board
+                Ship ship = new Ship(shipType, shipPositions);
+                playerBoards[playerId].PlaceShip(ship);
+                
+                Debug.Log($"[Client] Stored ship data locally for Player {playerId}: {shipType} with {shipPositions.Count} positions");
+            }
+            else
+            {
+                Debug.LogWarning($"[Client] Cannot store ship data - Player {playerId} board not found locally");
+            }
+        }
+        
+        // IMPORTANT: Update UI for BOTH server (host) and clients
         if (BattleshipsUIManager.Instance != null)
         {
             BattleshipsUIManager.Instance.OnShipPlaced(playerId, (ShipType)shipTypeInt, startPos, isHorizontal);
+            Debug.Log($"[{(IsServer ? "Server/Host" : "Client")}] UI updated for Player {playerId} ship placement");
+        }
+        else
+        {
+            Debug.LogWarning($"[{(IsServer ? "Server/Host" : "Client")}] BattleshipsUIManager.Instance is null - cannot update UI");
         }
     }
 
@@ -788,6 +851,24 @@ public class BattleshipsGameManager : NetworkBehaviour
         if (BattleshipsUIManager.Instance != null)
         {
             BattleshipsUIManager.Instance.OnShipPlacementFailed(playerId);
+        }
+    }
+
+    [ClientRpc]
+    private void NotifyPlayerFinishedPlacementClientRpc(int playerId)
+    {
+        Debug.Log($"[Client] Player {playerId} has finished placing all ships");
+        
+        // Only update UI for the player who finished
+        int localPlayerId = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.LocalClient != null
+            ? (int)Unity.Netcode.NetworkManager.Singleton.LocalClientId
+            : 0;
+            
+        if (playerId == localPlayerId && BattleshipsUIManager.Instance != null)
+        {
+            // Show waiting panel for this player
+            BattleshipsUIManager.Instance.ShowWaitingPanel("All ships placed! Waiting for other players...");
+            Debug.Log($"[Client] Showing waiting panel for Player {playerId}");
         }
     }
 
@@ -825,6 +906,118 @@ public class BattleshipsGameManager : NetworkBehaviour
         if (BattleshipsUIManager.Instance != null)
         {
             BattleshipsUIManager.Instance.OnGameOver(winnerId);
+        }
+    }
+    
+    /// <summary>
+    /// Client requests the board state for a specific player (used when switching targets)
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestBoardStateServerRpc(int requestingPlayerId, int targetPlayerId, ServerRpcParams rpcParams = default)
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("Only server can handle board state requests!");
+            return;
+        }
+
+        Debug.Log($"[Server] Player {requestingPlayerId} requested board state for Player {targetPlayerId}");
+
+        if (!playerBoards.ContainsKey(targetPlayerId))
+        {
+            Debug.LogError($"[Server] Target player {targetPlayerId} board not found!");
+            return;
+        }
+
+        PlayerBoardState targetBoard = playerBoards[targetPlayerId];
+
+        // Convert HashSets to arrays for network serialization
+        Vector2Int[] hitsArray = new Vector2Int[targetBoard.hits.Count];
+        targetBoard.hits.CopyTo(hitsArray);
+
+        Vector2Int[] missesArray = new Vector2Int[targetBoard.misses.Count];
+        targetBoard.misses.CopyTo(missesArray);
+
+        Debug.Log($"[Server] Sending board state: {hitsArray.Length} hits, {missesArray.Length} misses");
+
+        // Send board state back to the requesting client
+        SendBoardStateClientRpc(targetPlayerId, hitsArray, missesArray, new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { (ulong)requestingPlayerId }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Server sends board state to a specific client
+    /// </summary>
+    [ClientRpc]
+    private void SendBoardStateClientRpc(int targetPlayerId, Vector2Int[] hits, Vector2Int[] misses, ClientRpcParams clientRpcParams = default)
+    {
+        Debug.Log($"[Client] Received board state for Player {targetPlayerId}: {hits.Length} hits, {misses.Length} misses");
+
+        if (!playerBoards.ContainsKey(targetPlayerId))
+        {
+            Debug.LogError($"[Client] Target player {targetPlayerId} board not found locally!");
+            return;
+        }
+
+        PlayerBoardState targetBoard = playerBoards[targetPlayerId];
+
+        // Update the board state with received data
+        targetBoard.hits.Clear();
+        foreach (var hit in hits)
+        {
+            targetBoard.hits.Add(hit);
+        }
+
+        targetBoard.misses.Clear();
+        foreach (var miss in misses)
+        {
+            targetBoard.misses.Add(miss);
+        }
+
+        Debug.Log($"[Client] Updated board state for Player {targetPlayerId}");
+
+        // Notify UI to refresh if this is the currently viewed enemy
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.OnBoardStateReceived(targetPlayerId);
+        }
+    }
+    
+    /// <summary>
+    /// Sync player's own board hits to the client (called when they are attacked)
+    /// This allows the client to update their ship status display
+    /// </summary>
+    [ClientRpc]
+    private void SyncPlayerBoardHitsClientRpc(int playerId, Vector2Int[] hits, ClientRpcParams clientRpcParams = default)
+    {
+        Debug.Log($"[Client] Received {hits.Length} hits for my board (Player {playerId})");
+        
+        if (!playerBoards.ContainsKey(playerId))
+        {
+            Debug.LogWarning($"[Client] Player {playerId} board not found locally - creating it");
+            playerBoards[playerId] = new PlayerBoardState(playerId);
+        }
+        
+        PlayerBoardState playerBoard = playerBoards[playerId];
+        
+        // Update the hits on the client's local board state
+        playerBoard.hits.Clear();
+        foreach (var hit in hits)
+        {
+            playerBoard.hits.Add(hit);
+        }
+        
+        Debug.Log($"[Client] Updated my board with {playerBoard.hits.Count} hits");
+        
+        // Update the UI ship status display
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.UpdateCombatUI();
         }
     }
 
@@ -903,6 +1096,36 @@ public class BattleshipsGameManager : NetworkBehaviour
         {
             var board = kvp.Value;
             Debug.Log($"Player {kvp.Key}: Ships={board.shipList.Count}, Remaining={board.GetRemainingShipCount()}, Eliminated={board.isEliminated}");
+        }
+    }
+    
+    [ContextMenu("Verify Player Boards Initialized")]
+    private void VerifyPlayerBoards()
+    {
+        Debug.Log("=== Verifying Player Board Data ===");
+        Debug.Log($"Total Players: {playerCount}");
+        Debug.Log($"PlayerBoards Dictionary Count: {playerBoards.Count}");
+        
+        for (int i = 0; i < playerCount; i++)
+        {
+            if (playerBoards.ContainsKey(i))
+            {
+                var board = playerBoards[i];
+                Debug.Log($"? Player {i}: EXISTS - Ships={board.ships.Count}, Hits={board.hits.Count}, Misses={board.misses.Count}");
+            }
+            else
+            {
+                Debug.LogError($"? Player {i}: MISSING FROM DICTIONARY!");
+            }
+        }
+        
+        // Check for extra entries
+        foreach (var kvp in playerBoards)
+        {
+            if (kvp.Key >= playerCount)
+            {
+                Debug.LogWarning($"?? Extra player board found: Player {kvp.Key} (playerCount={playerCount})");
+            }
         }
     }
 

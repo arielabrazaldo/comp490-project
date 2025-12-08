@@ -211,8 +211,8 @@ public class BattleshipsBoardGenerator : MonoBehaviour
                 {
                     tileImage = tile.AddComponent<Image>();
                 }
-                // Set active tiles to sea water blue
-                tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Deep sea blue
+                // Set tiles to neutral white - UI Manager will apply state colors
+                tileImage.color = Color.white;
                 tileImage.raycastTarget = true;
 
                 // Get or add Button component
@@ -222,13 +222,15 @@ public class BattleshipsBoardGenerator : MonoBehaviour
                     tileButton = tile.AddComponent<Button>();
                 }
 
-                // Configure button colors with sea water theme
+                // CRITICAL FIX: Remove button color theme - it interferes with state-based colors
+                // Set all button colors to transparent so only the Image component color shows
                 ColorBlock colors = tileButton.colors;
-                colors.normalColor = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Deep sea blue
-                colors.highlightedColor = new Color(0.0f, 0.6f, 0.9f, 1.0f); // Lighter blue on hover
-                colors.pressedColor = new Color(0.0f, 0.8f, 1.0f, 1.0f); // Bright cyan when pressed
-                colors.selectedColor = new Color(0.0f, 0.5f, 0.8f, 1.0f); // Medium sea blue
-                colors.disabledColor = new Color(0.3f, 0.3f, 0.4f, 0.5f); // Gray when disabled
+                colors.normalColor = Color.white; // No tint
+                colors.highlightedColor = new Color(1f, 1f, 1f, 0.8f); // Slight fade on hover
+                colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f); // Slight darken on press
+                colors.selectedColor = Color.white; // No tint
+                colors.disabledColor = Color.white; // No tint
+                colors.colorMultiplier = 1f;
                 tileButton.colors = colors;
 
                 // Configure click handler
@@ -474,6 +476,54 @@ public class BattleshipsBoardGenerator : MonoBehaviour
     /// Get enemy board parent transform
     /// </summary>
     public Transform GetEnemyBoardParent() => enemyBoardParent;
+    
+    /// <summary>
+    /// Regenerate enemy board for a specific target player (used when switching targets in 3+ player games)
+    /// </summary>
+    public Dictionary<Vector2Int, GameObject> RegenerateEnemyBoard(int targetPlayerId)
+    {
+        if (BattleshipsGameManager.Instance == null)
+        {
+            Debug.LogError("BattleshipsGameManager not found! Cannot regenerate enemy board.");
+            return new Dictionary<Vector2Int, GameObject>();
+        }
+
+        if (enemyBoardParent == null)
+        {
+            Debug.LogError("Enemy board parent is null!");
+            return new Dictionary<Vector2Int, GameObject>();
+        }
+
+        // Get board configuration
+        var (rows, cols) = BattleshipsGameManager.Instance.GetBoardDimensions();
+        HashSet<Vector2Int> activeTiles = BattleshipsGameManager.Instance.GetActiveTiles();
+
+        if (activeTiles == null || activeTiles.Count == 0)
+        {
+            Debug.LogError("No active tiles found!");
+            return new Dictionary<Vector2Int, GameObject>();
+        }
+
+        Debug.Log($"?? Regenerating enemy board for Player {targetPlayerId} ({rows}x{cols}, {activeTiles.Count} tiles)");
+
+        // Clear existing enemy board
+        ClearBoard(enemyBoardParent);
+
+        // Regenerate enemy board for the target player
+        enemyBoardParent.gameObject.SetActive(true); // Ensure it's active
+        enemyBoardTiles = GenerateBoard(enemyBoardParent, rows, cols, activeTiles, false, targetPlayerId);
+        
+        Debug.Log($"? Enemy board regenerated with {enemyBoardTiles.Count} tiles for Player {targetPlayerId}");
+
+        // Update BattleshipsUIManager with new tiles
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.UpdateEnemyBoardTiles(enemyBoardTiles);
+            Debug.Log("? BattleshipsUIManager updated with new enemy board tiles");
+        }
+
+        return enemyBoardTiles;
+    }
     
     /// <summary>
     /// Regenerate boards with new cell size (clears and rebuilds)

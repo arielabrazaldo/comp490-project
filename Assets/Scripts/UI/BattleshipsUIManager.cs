@@ -28,6 +28,7 @@ public class BattleshipsUIManager : MonoBehaviour
     #region UI References
 
     [Header("Main Panels")]
+    [SerializeField] private GameObject battleShipPanels; // NEW: Parent container for all Battleships panels
     [SerializeField] private GameObject shipPlacementPanel;
     [SerializeField] private GameObject combatPanel;
     [SerializeField] private GameObject gameOverPanel;
@@ -246,6 +247,7 @@ public class BattleshipsUIManager : MonoBehaviour
 
     private void HideAllPanels()
     {
+        if (battleShipPanels) battleShipPanels.SetActive(false); // Hide parent container
         if (shipPlacementPanel) shipPlacementPanel.SetActive(false);
         if (combatPanel) combatPanel.SetActive(false);
         if (gameOverPanel) gameOverPanel.SetActive(false);
@@ -257,6 +259,10 @@ public class BattleshipsUIManager : MonoBehaviour
     public void ShowShipPlacementPanel()
     {
         HideAllPanels();
+        
+        // Activate parent container first
+        if (battleShipPanels) battleShipPanels.SetActive(true);
+        
         if (shipPlacementPanel) shipPlacementPanel.SetActive(true);
         
         // CRITICAL: Activate BoardPanel with ONLY player board visible
@@ -295,27 +301,31 @@ public class BattleshipsUIManager : MonoBehaviour
     public void ShowCombatPanel()
     {
         HideAllPanels();
+        
+        // Activate parent container first
+        if (battleShipPanels) battleShipPanels.SetActive(true);
+        
         if (combatPanel) combatPanel.SetActive(true);
         
         // CRITICAL: Keep BoardPanel active and now show BOTH boards
         if (boardPanel) 
         {
             boardPanel.SetActive(true);
-            Debug.Log("? BoardPanel active for combat");
+            Debug.Log("?? BoardPanel active for combat");
         }
         
         // Ensure player board stays active
         if (playerBoardParent != null)
         {
             playerBoardParent.gameObject.SetActive(true);
-            Debug.Log("? Player board active for combat");
+            Debug.Log("?? Player board active for combat");
         }
         
         // NOW activate enemy board for combat phase
         if (enemyBoardParent != null)
         {
             enemyBoardParent.gameObject.SetActive(true);
-            Debug.Log("? Enemy board NOW activated for combat phase");
+            Debug.Log("?? Enemy board NOW activated for combat phase");
         }
         
         // Set ship status title
@@ -329,7 +339,7 @@ public class BattleshipsUIManager : MonoBehaviour
         if (targetPlayerPanel != null)
         {
             targetPlayerPanel.SetActive(true);
-            Debug.Log("? Target player panel activated (dropdown should be visible)");
+            Debug.Log("?? Target player panel activated (dropdown should be visible)");
         }
         else
         {
@@ -341,11 +351,14 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             leaveGameButton.gameObject.SetActive(true);
             leaveGameButton.interactable = true;
-            Debug.Log("? Leave game button activated");
+            Debug.Log("?? Leave game button activated");
         }
         
         // NEW: Populate enemy player dropdown
         PopulateEnemyPlayerDropdown();
+        
+        // CRITICAL: Log the initial selected target for debugging
+        Debug.Log($"?? Combat panel shown - Initial target: Player {selectedTargetPlayerId}");
         
         UpdateCombatUI();
     }
@@ -353,6 +366,10 @@ public class BattleshipsUIManager : MonoBehaviour
     public void ShowGameOverPanel(int winnerId)
     {
         HideAllPanels();
+        
+        // Activate parent container first
+        if (battleShipPanels) battleShipPanels.SetActive(true);
+        
         if (gameOverPanel) gameOverPanel.SetActive(true);
         
         if (winnerText)
@@ -372,6 +389,9 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         HideAllPanels();
         
+        // Activate parent container first
+        if (battleShipPanels) battleShipPanels.SetActive(true);
+        
         // Waiting panel is optional - only show if assigned
         if (waitingPanel != null)
         {
@@ -390,6 +410,26 @@ public class BattleshipsUIManager : MonoBehaviour
         else
         {
             Debug.Log($"Waiting panel not assigned - message: {message}");
+        }
+        
+        // CRITICAL: Hide the board panel when showing waiting screen
+        if (boardPanel != null)
+        {
+            boardPanel.SetActive(false);
+            Debug.Log("? Board panel hidden while waiting");
+        }
+        
+        // Also explicitly hide individual board parents
+        if (playerBoardParent != null)
+        {
+            playerBoardParent.gameObject.SetActive(false);
+            Debug.Log("? Player board hidden while waiting");
+        }
+        
+        if (enemyBoardParent != null)
+        {
+            enemyBoardParent.gameObject.SetActive(false);
+            Debug.Log("? Enemy board hidden while waiting");
         }
     }
 
@@ -447,7 +487,7 @@ public class BattleshipsUIManager : MonoBehaviour
             // Calculate actual enemy player ID (first enemy after local player)
             selectedTargetPlayerId = GetEnemyPlayerIdFromDropdownIndex(0);
             
-            Debug.Log($"? Populated enemy dropdown with {options.Count} enemies. Selected: Player {selectedTargetPlayerId + 1}");
+            Debug.Log($"? Populated enemy dropdown with {options.Count} enemies. Selected: Player {selectedTargetPlayerId}");
         }
         else
         {
@@ -461,9 +501,12 @@ public class BattleshipsUIManager : MonoBehaviour
     private void OnEnemyPlayerDropdownChanged(int dropdownIndex)
     {
         // Get the actual enemy player ID from the dropdown index
-        selectedTargetPlayerId = GetEnemyPlayerIdFromDropdownIndex(dropdownIndex);
+        int newTargetPlayerId = GetEnemyPlayerIdFromDropdownIndex(dropdownIndex);
         
-        Debug.Log($"?? Enemy target changed to Player {selectedTargetPlayerId + 1} (dropdown index: {dropdownIndex})");
+        Debug.Log($"?? Enemy target changed from Player {selectedTargetPlayerId} to Player {newTargetPlayerId} (dropdown index: {dropdownIndex})");
+        
+        // Update selected target BEFORE switching board
+        selectedTargetPlayerId = newTargetPlayerId;
         
         // Switch to the selected enemy's board
         SwitchEnemyBoard(selectedTargetPlayerId);
@@ -509,35 +552,69 @@ public class BattleshipsUIManager : MonoBehaviour
         BattleshipsBoardGenerator boardGenerator = FindFirstObjectByType<BattleshipsBoardGenerator>();
         if (boardGenerator == null)
         {
-            Debug.LogError("? BattleshipsBoardGenerator not found!");
+            Debug.LogError("?? BattleshipsBoardGenerator not found!");
             return;
         }
 
-        // Get the enemy board for the selected player
-        Transform enemyBoardParent = boardGenerator.GetEnemyBoardParent();
-        if (enemyBoardParent == null)
+        Debug.Log($"?? Switching enemy board to Player {targetPlayerId} (was viewing Player {selectedTargetPlayerId})");
+
+        // Regenerate enemy board for the selected target player
+        Dictionary<Vector2Int, GameObject> newEnemyTiles = boardGenerator.RegenerateEnemyBoard(targetPlayerId);
+        
+        if (newEnemyTiles != null && newEnemyTiles.Count > 0)
         {
-            Debug.LogError("? Enemy board parent is null!");
+            // Update local reference
+            enemyBoardTiles = newEnemyTiles;
+            Debug.Log($"? Enemy board switched successfully ({newEnemyTiles.Count} tiles) - Now viewing Player {targetPlayerId}");
+            
+            // CRITICAL FIX: Request board state from server before refreshing visuals
+            if (BattleshipsGameManager.Instance != null)
+            {
+                int myPlayerId = GetLocalPlayerId();
+                Debug.Log($"?? Requesting board state for Player {targetPlayerId} from server...");
+                BattleshipsGameManager.Instance.RequestBoardStateServerRpc(myPlayerId, targetPlayerId);
+            }
+            
+            // Note: Visual refresh will happen in OnBoardStateReceived callback
+        }
+        else
+        {
+            Debug.LogError($"?? Failed to regenerate enemy board for Player {targetPlayerId}");
+        }
+    }
+    
+    /// <summary>
+    /// Update enemy board tiles dictionary (called by BattleshipsBoardGenerator after regeneration)
+    /// </summary>
+    public void UpdateEnemyBoardTiles(Dictionary<Vector2Int, GameObject> newEnemyTiles)
+    {
+        if (newEnemyTiles == null)
+        {
+            Debug.LogWarning("?? Attempted to update enemy board tiles with null dictionary");
             return;
         }
-
-        // Clear current enemy board tiles
-        foreach (Transform child in enemyBoardParent)
+        
+        enemyBoardTiles = newEnemyTiles;
+        Debug.Log($"? Updated enemy board tiles dictionary ({newEnemyTiles.Count} tiles)");
+    }
+    
+    /// <summary>
+    /// Called when board state is received from server (after requesting it)
+    /// </summary>
+    public void OnBoardStateReceived(int targetPlayerId)
+    {
+        Debug.Log($"?? Board state received for Player {targetPlayerId}");
+        
+        // Only refresh if this is the currently selected target
+        if (targetPlayerId == selectedTargetPlayerId)
         {
-            Destroy(child.gameObject);
+            Debug.Log($"?? This is the current target - refreshing visuals");
+            RefreshEnemyBoardVisuals(targetPlayerId);
         }
-        enemyBoardTiles.Clear();
-
-        // Regenerate enemy board for the selected target
-        // Note: This requires BattleshipsBoardGenerator to have a method to regenerate a specific player's board
-        // For now, we'll just log this - you may need to implement board regeneration in BattleshipsBoardGenerator
-        Debug.Log($"?? Switching enemy board to Player {targetPlayerId + 1}");
-        
-        // TODO: Implement board regeneration in BattleshipsBoardGenerator
-        // boardGenerator.RegenerateEnemyBoard(targetPlayerId);
-        
-        // Update visual state of tiles based on attack history
-        RefreshEnemyBoardVisuals(targetPlayerId);
+        else
+        {
+            Debug.Log($"?? Board state received for Player {targetPlayerId} but current target is Player {selectedTargetPlayerId} - skipping refresh");
+        }
     }
 
     /// <summary>
@@ -545,15 +622,41 @@ public class BattleshipsUIManager : MonoBehaviour
     /// </summary>
     private void RefreshEnemyBoardVisuals(int targetPlayerId)
     {
-        if (BattleshipsGameManager.Instance == null) return;
+        if (BattleshipsGameManager.Instance == null)
+        {
+            Debug.LogWarning("?? BattleshipsGameManager.Instance is null - cannot refresh visuals");
+            return;
+        }
 
         // Get the target player's board
         var targetBoard = BattleshipsGameManager.Instance.GetPlayerBoard(targetPlayerId);
         if (targetBoard == null)
         {
-            Debug.LogWarning($"?? Cannot get board for player {targetPlayerId}");
+            Debug.LogWarning($"?? Cannot get board for player {targetPlayerId} - board data not available");
+            
+            // FALLBACK: Reset all tiles to default blue (water)
+            Debug.Log($"?? Resetting all enemy board tiles to default (waiting for server data)");
+            foreach (var kvp in enemyBoardTiles)
+            {
+                GameObject tile = kvp.Value;
+                if (tile != null)
+                {
+                    Image tileImage = tile.GetComponent<Image>();
+                    if (tileImage != null)
+                    {
+                        tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Blue water
+                    }
+                }
+            }
             return;
         }
+
+        Debug.Log($"?? Refreshing enemy board visuals for Player {targetPlayerId} ({enemyBoardTiles.Count} tiles)");
+        Debug.Log($"   Target board has {targetBoard.hits.Count} hits and {targetBoard.misses.Count} misses");
+        
+        int hitsFound = 0;
+        int missesFound = 0;
+        int untouchedTiles = 0;
 
         // Update each tile based on hit/miss history
         foreach (var kvp in enemyBoardTiles)
@@ -561,32 +664,41 @@ public class BattleshipsUIManager : MonoBehaviour
             Vector2Int pos = kvp.Key;
             GameObject tile = kvp.Value;
             
+            if (tile == null)
+            {
+                Debug.LogWarning($"?? Tile at {pos} is null!");
+                continue;
+            }
+            
             Image tileImage = tile.GetComponent<Image>();
-            if (tileImage == null) continue;
+            if (tileImage == null) 
+            {
+                Debug.LogWarning($"?? Tile at {pos} has no Image component!");
+                continue;
+            }
 
-            // Check if this tile has been hit
+            // Check if this tile has been attacked (hit or miss)
             if (targetBoard.hits.Contains(pos))
             {
-                // Check if it was a hit or miss
-                if (targetBoard.HasShip(pos))
-                {
-                    // Hit - show red
-                    tileImage.color = new Color(0.8f, 0.1f, 0.0f, 1.0f); // Dark red
-                }
-                else
-                {
-                    // Miss - show lighter blue
-                    tileImage.color = new Color(0.0f, 0.6f, 0.9f, 1.0f); // Light blue
-                }
+                // This tile was hit - show black
+                tileImage.color = Color.black;
+                hitsFound++;
+            }
+            else if (targetBoard.misses.Contains(pos))
+            {
+                // This tile was a miss - show red
+                tileImage.color = Color.red;
+                missesFound++;
             }
             else
             {
-                // Not attacked yet - reset to default
-                tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Default blue
+                // Not attacked yet - show blue water
+                tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Blue water
+                untouchedTiles++;
             }
         }
         
-        Debug.Log($"? Refreshed enemy board visuals for Player {targetPlayerId + 1}");
+        Debug.Log($"? Refreshed enemy board: {hitsFound} hits, {missesFound} misses, {untouchedTiles} untouched tiles");
     }
 
     #endregion
@@ -971,25 +1083,60 @@ public class BattleshipsUIManager : MonoBehaviour
     /// </summary>
     public void OnAttackResult(int attackerId, int targetId, Vector2Int position, BattleshipsGameManager.AttackResult result)
     {
-        // Update visual board
-        VisualizeAttackResult(position, result, targetId);
-
-        // Show attack result message with color
-        string resultMessage = result switch
+        // CRITICAL FIX: Only visualize if this attack is relevant to what we're currently viewing
+        int myPlayerId = GetLocalPlayerId();
+        
+        // Determine if we should visualize this attack
+        bool shouldVisualize = false;
+        bool isPlayerBoard = false;
+        
+        if (targetId == myPlayerId)
         {
-            BattleshipsGameManager.AttackResult.Miss => "<color=blue><b>Miss!</b></color>",
-            BattleshipsGameManager.AttackResult.Hit => "<color=orange><b>Hit!</b></color>",
-            BattleshipsGameManager.AttackResult.Sunk => "<color=red><b>Ship Sunk!</b></color>",
-            BattleshipsGameManager.AttackResult.Eliminated => "<color=purple><b>Player Eliminated!</b></color>",
-            _ => ""
-        };
-
-        if (attackResultText)
+            // Attack on MY board - always visualize on player board
+            shouldVisualize = true;
+            isPlayerBoard = true;
+            Debug.Log($"?? Attack on MY board (Player {myPlayerId}) at {position} - Result: {result}");
+        }
+        else if (targetId == selectedTargetPlayerId && BattleshipsGameManager.Instance != null && 
+                 BattleshipsGameManager.Instance.GetGameState() == BattleshipsGameManager.GameState.InProgress)
         {
-            attackResultText.text = resultMessage;
+            // Attack on the enemy I'm currently viewing - visualize on enemy board
+            shouldVisualize = true;
+            isPlayerBoard = false;
+            Debug.Log($"?? Attack on CURRENTLY VIEWED enemy (Player {targetId}) at {position} - Result: {result}");
+        }
+        else
+        {
+            // Attack on a different player that I'm not viewing - don't visualize
+            Debug.Log($"?? Attack on Player {targetId} (not currently viewing) - skipping visualization");
+        }
+        
+        // Only visualize if this attack is relevant to current view
+        if (shouldVisualize)
+        {
+            VisualizeAttackResult(position, result, isPlayerBoard);
         }
 
-        ShowMessage(resultMessage);
+        // Show attack result message with color (only if I'm the attacker or target)
+        if (attackerId == myPlayerId || targetId == myPlayerId)
+        {
+            string resultMessage = result switch
+            {
+                BattleshipsGameManager.AttackResult.Miss => "<color=blue><b>Miss!</b></color>",
+                BattleshipsGameManager.AttackResult.Hit => "<color=orange><b>Hit!</b></color>",
+                BattleshipsGameManager.AttackResult.Sunk => "<color=red><b>Ship Sunk!</b></color>",
+                BattleshipsGameManager.AttackResult.Eliminated => "<color=purple><b>Player Eliminated!</b></color>",
+                _ => ""
+            };
+
+            if (attackResultText)
+            {
+                attackResultText.text = resultMessage;
+            }
+
+            ShowMessage(resultMessage);
+        }
+
         UpdateCombatUI();
     }
 
@@ -1007,21 +1154,26 @@ public class BattleshipsUIManager : MonoBehaviour
 
             if (playerBoardTiles.TryGetValue(pos, out GameObject tile))
             {
-                // Change tile color to light gray - very obvious contrast with blue water
+                // Change tile color to grey for ship placement
                 Image tileImage = tile.GetComponent<Image>();
                 if (tileImage) 
                 {
-                    tileImage.color = new Color(0.75f, 0.75f, 0.75f, 1.0f); // Light gray - much more visible!
+                    tileImage.color = new Color(0.5f, 0.5f, 0.5f, 1.0f); // Grey for ships
                 }
             }
         }
     }
 
-    private void VisualizeAttackResult(Vector2Int position, BattleshipsGameManager.AttackResult result, int targetId)
+    /// <summary>
+    /// Visualize attack result on the correct board (updated signature - uses bool instead of targetId)
+    /// </summary>
+    private void VisualizeAttackResult(Vector2Int position, BattleshipsGameManager.AttackResult result, bool isPlayerBoard)
     {
-        // Determine which board to update
-        Dictionary<Vector2Int, GameObject> targetBoard = (targetId == localPlayerId) ? playerBoardTiles : enemyBoardTiles;
-
+        // Select the correct board based on the flag
+        Dictionary<Vector2Int, GameObject> targetBoard = isPlayerBoard ? playerBoardTiles : enemyBoardTiles;
+        
+        string boardName = isPlayerBoard ? "PLAYER" : "ENEMY";
+        
         if (targetBoard.TryGetValue(position, out GameObject tile))
         {
             Image tileImage = tile.GetComponent<Image>();
@@ -1030,15 +1182,25 @@ public class BattleshipsUIManager : MonoBehaviour
                 switch (result)
                 {
                     case BattleshipsGameManager.AttackResult.Miss:
-                        tileImage.color = new Color(0.0f, 0.6f, 0.9f, 1.0f); // Lighter blue for miss (splash)
+                        tileImage.color = Color.red; // Red for miss
+                        Debug.Log($"? Visualized MISS on {boardName} board at {position}");
                         break;
                     case BattleshipsGameManager.AttackResult.Hit:
                     case BattleshipsGameManager.AttackResult.Sunk:
                     case BattleshipsGameManager.AttackResult.Eliminated:
-                        tileImage.color = new Color(0.8f, 0.1f, 0.0f, 1.0f); // Dark red for hit (fire/damage)
+                        tileImage.color = Color.black; // Black for hit
+                        Debug.Log($"? Visualized HIT on {boardName} board at {position} - Result: {result}");
                         break;
                 }
             }
+            else
+            {
+                Debug.LogWarning($"?? Tile at {position} on {boardName} board has no Image component!");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"?? Could not find tile at {position} on {boardName} board (board has {targetBoard.Count} tiles)");
         }
     }
 
@@ -1049,6 +1211,31 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         playerBoardTiles = playerTiles;
         enemyBoardTiles = enemyTiles;
+        
+        // Set all tiles to blue water color initially
+        SetTilesToWaterColor(playerBoardTiles);
+        SetTilesToWaterColor(enemyBoardTiles);
+        
+        Debug.Log($"Board tiles initialized: {playerBoardTiles.Count} player tiles, {enemyBoardTiles.Count} enemy tiles (all set to blue water)");
+    }
+    
+    /// <summary>
+    /// Set all tiles in a board to blue water color
+    /// </summary>
+    private void SetTilesToWaterColor(Dictionary<Vector2Int, GameObject> tiles)
+    {
+        foreach (var kvp in tiles)
+        {
+            GameObject tile = kvp.Value;
+            if (tile != null)
+            {
+                Image tileImage = tile.GetComponent<Image>();
+                if (tileImage != null)
+                {
+                    tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Blue water
+                }
+            }
+        }
     }
 
     #endregion
@@ -1199,12 +1386,12 @@ public class BattleshipsUIManager : MonoBehaviour
             Image tileImage = tile.GetComponent<Image>();
             if (tileImage != null)
             {
-                // Reset to default water color
-                tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Default blue
+                // Reset to blue water color
+                tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Blue water
             }
         }
         
-        Debug.Log("? Cleared ship visualizations from player board");
+        Debug.Log("?? Cleared ship visualizations from player board");
     }
 
     #endregion
@@ -1222,6 +1409,13 @@ public class BattleshipsUIManager : MonoBehaviour
         // Hide all UI panels
         HideAllPanels();
         Debug.Log("? All Battleships UI panels hidden");
+        
+        // CRITICAL: Deactivate parent container that holds all Battleships panels
+        if (battleShipPanels != null)
+        {
+            battleShipPanels.SetActive(false);
+            Debug.Log("? Deactivated battleShipPanels parent container");
+        }
         
         // CRITICAL: Deactivate BoardPanel (which contains both board parents)
         if (boardPanel != null)
@@ -1444,4 +1638,5 @@ public class BattleshipsUIManager : MonoBehaviour
     }
 
     #endregion
+
 }
