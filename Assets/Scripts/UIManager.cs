@@ -21,6 +21,7 @@ public class UIManager : MonoBehaviour
 
     [Header("Panels")]
     [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject gameModeSelectionPanel; // NEW: Game mode selection panel
     [SerializeField] private GameObject gameSetupPanel;
     [SerializeField] private GameObject lobbyPanel;
     [SerializeField] private GameObject joinPanel;
@@ -32,11 +33,16 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Button joinButton;
     [SerializeField] private Button exitButton;
 
+    [Header("Game Mode Selection Panel")]
+    [SerializeField] private Button diceRaceButton; // NEW: Button for Dice Race mode
+    [SerializeField] private Button monopolyButton; // NEW: Button for Monopoly mode
+    [SerializeField] private Button battleshipsButton; // NEW: Button for Battleships mode (placeholder)
+    [SerializeField] private Button backFromGameModeButton; // NEW: Back button
+
     [Header("Game Setup Panel")]
     [SerializeField] private TMP_InputField tileCountInput;
     [SerializeField] private TMP_InputField playerCountInput;
     [SerializeField] private Button createLobbyButton;
-    [SerializeField] private Button createMonopolyLobbyButton; // New Monopoly button
     [SerializeField] private Button backFromSetupButton;
 
     [Header("Join Panel")]
@@ -76,15 +82,17 @@ public class UIManager : MonoBehaviour
 
     [Header("Game Mode Settings")]
     [SerializeField] private bool isMonopolyMode = false; // Track game mode - now visible in inspector
+    [SerializeField] private bool isBattleshipsMode = false; // Track Battleships mode
 
     private Coroutine statusClearCoroutine;
     private float lastPlayerListUpdate = 0f;
     private const float PLAYER_LIST_UPDATE_INTERVAL = 2f;
+    private bool isSubscribedToNetworkEvents = false;
 
     // Game setup data
     private int configuredTileCount = 20;
     private int configuredPlayerCount = 2;
-
+    
     private void Awake()
     {
         if (instance == null)
@@ -353,6 +361,7 @@ public class UIManager : MonoBehaviour
     private void ValidateUIReferences()
     {
         if (mainMenuPanel == null) Debug.LogError("MainMenuPanel is not assigned in UIManager!");
+        if (gameModeSelectionPanel == null) Debug.LogError("GameModeSelectionPanel is not assigned in UIManager!");
         if (gameSetupPanel == null) Debug.LogError("GameSetupPanel is not assigned in UIManager!");
         if (lobbyPanel == null) Debug.LogError("LobbyPanel is not assigned in UIManager!");
         if (joinPanel == null) Debug.LogError("JoinPanel is not assigned in UIManager!");
@@ -360,11 +369,19 @@ public class UIManager : MonoBehaviour
         if (monopolyGamePanel == null) Debug.LogError("MonopolyGamePanel is not assigned in UIManager!");
         if (hostButton == null) Debug.LogError("HostButton is not assigned in UIManager!");
         if (joinButton == null) Debug.LogError("JoinButton is not assigned in UIManager!");
+        if (exitButton == null) Debug.LogError("ExitButton is not assigned in UIManager!");
+        
+        // Game Mode Selection Panel validation
+        if (diceRaceButton == null) Debug.LogError("DiceRaceButton is not assigned in UIManager!");
+        if (monopolyButton == null) Debug.LogError("MonopolyButton is not assigned in UIManager!");
+        if (battleshipsButton == null) Debug.LogError("BattleshipsButton is not assigned in UIManager!");
+        if (backFromGameModeButton == null) Debug.LogError("BackFromGameModeButton is not assigned in UIManager!");
+        
         if (tileCountInput == null) Debug.LogError("TileCountInput is not assigned in UIManager!");
         if (playerCountInput == null) Debug.LogError("PlayerCountInput is not assigned in UIManager!");
         if (createLobbyButton == null) Debug.LogError("CreateLobbyButton is not assigned in UIManager!");
-        if (createMonopolyLobbyButton == null) Debug.LogError("CreateMonopolyLobbyButton is not assigned in UIManager!");
         if (backFromSetupButton == null) Debug.LogError("BackFromSetupButton is not assigned in UIManager!");
+        
         if (submitJoinButton == null) Debug.LogError("SubmitJoinButton is not assigned in UIManager!");
         if (backToMenuButton == null) Debug.LogError("BackToMenuButton is not assigned in UIManager!");
         if (startGameButton == null) Debug.LogError("StartGameButton is not assigned in UIManager!");
@@ -403,9 +420,16 @@ public class UIManager : MonoBehaviour
         if (hostButton != null) hostButton.onClick.AddListener(OnHostButtonClicked);
         if (joinButton != null) joinButton.onClick.AddListener(OnJoinButtonClicked);
         if (exitButton != null) exitButton.onClick.AddListener(OnExitButtonClicked);
+        
+        // Game Mode Selection Panel button listeners
+        if (diceRaceButton != null) diceRaceButton.onClick.AddListener(OnDiceRaceButtonClicked);
+        if (monopolyButton != null) monopolyButton.onClick.AddListener(OnMonopolyButtonClicked);
+        if (battleshipsButton != null) battleshipsButton.onClick.AddListener(OnBattleshipsButtonClicked);
+        if (backFromGameModeButton != null) backFromGameModeButton.onClick.AddListener(OnBackFromGameModeClicked);
+        
         if (createLobbyButton != null) createLobbyButton.onClick.AddListener(OnCreateLobbyButtonClicked);
-        if (createMonopolyLobbyButton != null) createMonopolyLobbyButton.onClick.AddListener(OnCreateMonopolyLobbyButtonClicked);
         if (backFromSetupButton != null) backFromSetupButton.onClick.AddListener(OnBackFromSetupClicked);
+        
         if (submitJoinButton != null) submitJoinButton.onClick.AddListener(OnSubmitJoinClicked);
         if (backToMenuButton != null) backToMenuButton.onClick.AddListener(OnBackToMenuClicked);
         if (startGameButton != null) startGameButton.onClick.AddListener(OnStartGameClicked);
@@ -427,11 +451,18 @@ public class UIManager : MonoBehaviour
     private void HideAllPanels()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        if (gameModeSelectionPanel != null) gameModeSelectionPanel.SetActive(false);
         if (gameSetupPanel != null) gameSetupPanel.SetActive(false);
         if (lobbyPanel != null) lobbyPanel.SetActive(false);
         if (joinPanel != null) joinPanel.SetActive(false);
         if (diceRaceGamePanel != null) diceRaceGamePanel.SetActive(false);
         if (monopolyGamePanel != null) monopolyGamePanel.SetActive(false);
+        
+        // Hide Battleships setup panel managed by BattleshipsSetupManager
+        if (BattleshipsSetupManager.Instance != null)
+        {
+            BattleshipsSetupManager.Instance.HideBattleshipsGameSetup();
+        }
     }
 
     private void ShowMainMenu()
@@ -445,6 +476,22 @@ public class UIManager : MonoBehaviour
         ClearStatus();
     }
 
+    public void ShowGameModeSelectionPublic()
+    {
+        ShowGameModeSelection();
+    }
+
+    private void ShowGameModeSelection()
+    {
+        HideAllPanels();
+        if (gameModeSelectionPanel != null) 
+        {
+            gameModeSelectionPanel.SetActive(true);
+            Debug.Log("Showing Game Mode Selection Panel");
+        }
+        ClearStatus();
+    }
+
     private void ShowGameSetup()
     {
         HideAllPanels();
@@ -453,18 +500,36 @@ public class UIManager : MonoBehaviour
             gameSetupPanel.SetActive(true);
             Debug.Log("Showing Game Setup Panel");
             
-            // player and tile space prompts
-            if (tileCountInput != null) tileCountInput.text = "20";
+            // Set default values for player and tile space prompts
             if (playerCountInput != null) playerCountInput.text = "2";
             
-            // Show/hide appropriate inputs based on mode
-            if (tileCountInput != null) tileCountInput.gameObject.SetActive(!isMonopolyMode);
+            // Show/hide tile count input based on mode (only for Dice Race)
+            if (tileCountInput != null) 
+            {
+                tileCountInput.gameObject.SetActive(!isMonopolyMode);
+                if (!isMonopolyMode) tileCountInput.text = "20";
+            }
+            
+            // Update the create lobby button text based on mode
+            if (createLobbyButton != null)
+            {
+                TextMeshProUGUI buttonText = createLobbyButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (buttonText != null)
+                {
+                    buttonText.text = isMonopolyMode ? "Create Monopoly Lobby" : "Create Dice Race Lobby";
+                }
+            }
         }
         else
         {
             Debug.LogError("GameSetupPanel is NULL! Please assign it in the Inspector.");
         }
         ClearStatus();
+    }
+
+    public void ShowLobbyPublic()
+    {
+        ShowLobby();
     }
 
     private void ShowLobby()
@@ -498,7 +563,47 @@ public class UIManager : MonoBehaviour
     {
         HideAllPanels();
         
-        if (isMonopolyMode && monopolyGamePanel != null) 
+        if (isBattleshipsMode)
+        {
+            // Battleships mode - show ship placement panel
+            Debug.Log("Showing Battleships Ship Placement Panel");
+            
+            // Hide other game boards
+            if (BoardGenerator.Instance != null && BoardGenerator.Instance.GetBoardParent() != null)
+            {
+                BoardGenerator.Instance.GetBoardParent().gameObject.SetActive(false);
+            }
+            
+            if (MonopolyBoardManager.Instance != null && MonopolyBoardManager.Instance.boardParent != null)
+            {
+                MonopolyBoardManager.Instance.boardParent.gameObject.SetActive(false);
+            }
+            
+            // CRITICAL FIX: Generate Battleships boards FIRST (which activates parents)
+            BattleshipsBoardGenerator boardGenerator = FindFirstObjectByType<BattleshipsBoardGenerator>();
+            if (boardGenerator != null)
+            {
+                Debug.Log("Generating Battleships boards (this will activate board parents)...");
+                boardGenerator.GenerateBoards();
+                Debug.Log("? Battleships boards generated and activated");
+            }
+            else
+            {
+                Debug.LogError("? BattleshipsBoardGenerator not found in scene!");
+            }
+            
+            // Show Battleships ship placement UI AFTER boards are generated
+            if (BattleshipsUIManager.Instance != null)
+            {
+                BattleshipsUIManager.Instance.ShowShipPlacementPanel();
+                Debug.Log("? Showing Battleships ship placement panel");
+            }
+            else
+            {
+                Debug.LogError("? BattleshipsUIManager instance not found!");
+            }
+        }
+        else if (isMonopolyMode && monopolyGamePanel != null) 
         {
             monopolyGamePanel.SetActive(true);
             Debug.Log($"Showing Monopoly Game Panel - Mode: {isMonopolyMode}");
@@ -507,7 +612,7 @@ public class UIManager : MonoBehaviour
             if (BoardGenerator.Instance != null && BoardGenerator.Instance.GetBoardParent() != null)
             {
                 BoardGenerator.Instance.GetBoardParent().gameObject.SetActive(false);
-                Debug.Log("? Hid Dice Race board");
+                Debug.Log("?? Hid Dice Race board");
             }
             
             // Show Monopoly board FIRST, before UI updates
@@ -520,7 +625,7 @@ public class UIManager : MonoBehaviour
                 if (boardCanvas != null)
                 {
                     boardCanvas.sortingOrder = -1; // Put board behind UI
-                    Debug.Log("? Set Monopoly board canvas sorting order to -1");
+                    Debug.Log("?? Set Monopoly board canvas sorting order to -1");
                 }
                 else
                 {
@@ -529,11 +634,11 @@ public class UIManager : MonoBehaviour
                     if (boardCanvas != null)
                     {
                         // Don't change the main canvas, instead add sorting to board parent
-                        Debug.Log("? Board is on main canvas - layout should be correct");
+                        Debug.Log("?? Board is on main canvas - layout should be correct");
                     }
                 }
                 
-                Debug.Log("? Showed Monopoly board");
+                Debug.Log("?? Showed Monopoly board");
             }
             
             // Initialize game UI
@@ -582,9 +687,9 @@ public class UIManager : MonoBehaviour
             // Force button update after a short delay
             StartCoroutine(DelayedButtonUpdate());
             
-            Debug.Log($"? Monopoly Game Panel configured and active");
+            Debug.Log($"?? Monopoly Game Panel configured and active");
         }
-        else if (!isMonopolyMode && diceRaceGamePanel != null)
+        else if (!isMonopolyMode && !isBattleshipsMode && diceRaceGamePanel != null)
         {
             diceRaceGamePanel.SetActive(true);
             Debug.Log("Showing Dice Race Game Panel");
@@ -789,8 +894,29 @@ public class UIManager : MonoBehaviour
     {
         Debug.Log("Leave game button clicked");
         
+        // CRITICAL: Clean up Battleships boards BEFORE leaving lobby
+        if (isBattleshipsMode)
+        {
+            Debug.Log("?? Cleaning up Battleships game...");
+            
+            // Use BattleshipsUIManager's cleanup method (cleaner than reflection)
+            if (BattleshipsUIManager.Instance != null)
+            {
+                BattleshipsUIManager.Instance.CleanupForMainMenu();
+            }
+            else
+            {
+                Debug.LogWarning("?? BattleshipsUIManager instance not found");
+            }
+            
+            // Reset Battleships mode flag
+            isBattleshipsMode = false;
+            Debug.Log("? Reset Battleships mode flag");
+        }
+        
         // Return to main menu and disconnect
         await LobbyManager.Instance.LeaveLobby();
+        
         ShowMainMenu();
     }
 
@@ -895,34 +1021,34 @@ public class UIManager : MonoBehaviour
                         {
                             var properties = groupedProperties[group];
                             string groupColor = GetPropertyGroupColorHex(group);
-                            
+							
                             // Add properties in this group with color (no header, no spacing between groups)
-                            foreach (var ownership in properties)
-                            {
-                                var space = MonopolyGameManager.Instance.GetSpace(ownership.propertyId);
-                                if (space != null)
-                                {
-                                    propertiesList += $"<color={groupColor}>• {space.spaceName}</color>";
-                                    
-                                    // Add building info
-                                    if (ownership.hasHotel)
-                                    {
-                                        propertiesList += " [HOTEL]";
-                                    }
-                                    else if (ownership.houseCount > 0)
-                                    {
-                                        propertiesList += $" [{ownership.houseCount} House{(ownership.houseCount > 1 ? "s" : "")}]";
-                                    }
-                                    
-                                    // Add mortgage status
-                                    if (ownership.isMortgaged)
-                                    {
-                                        propertiesList += " (Mortgaged)";
-                                    }
-                                    
-                                    propertiesList += "\n";
-                                }
-                            }
+							foreach (var ownership in properties)
+							{
+								var space = MonopolyGameManager.Instance.GetSpace(ownership.propertyId);
+								if (space != null)
+								{
+									propertiesList += $"<color={groupColor}>• {space.spaceName}</color>";
+									
+									// Add building info
+									if (ownership.hasHotel)
+									{
+										propertiesList += " [HOTEL]";
+									}
+									else if (ownership.houseCount > 0)
+									{
+										propertiesList += $" [{ownership.houseCount} House{(ownership.houseCount > 1 ? "s" : "")}]";
+									}
+									
+									// Add mortgage status
+									if (ownership.isMortgaged)
+									{
+										propertiesList += " (Mortgaged)";
+									}
+									
+									propertiesList += "\n";
+								}
+							}
                         }
                     }
                     
@@ -1062,84 +1188,31 @@ public class UIManager : MonoBehaviour
 
     private void OnHostButtonClicked()
     {
-        Debug.Log("Host button clicked - showing game setup");
+        Debug.Log("Host button clicked - showing game mode selection");
+        ShowGameModeSelection();
+        SetStatusInfo("Select a game mode");
+    }
+
+    private void OnDiceRaceButtonClicked()
+    {
+        Debug.Log("Dice Race button clicked");
+        isMonopolyMode = false;
+        isBattleshipsMode = false;
         ShowGameSetup();
-        SetStatusInfo("Configure your game settings");
+        SetStatusInfo("Configure your Dice Race game settings");
     }
 
-    private async void OnCreateLobbyButtonClicked()
+    private async void OnMonopolyButtonClicked()
     {
-        Debug.Log("Create lobby button clicked");
-        isMonopolyMode = false; // Set to dice race mode
+        Debug.Log("Monopoly button clicked");
+        isMonopolyMode = true;
+        isBattleshipsMode = false;
         
-        if (int.TryParse(tileCountInput.text, out int tileCount))
-        {
-            configuredTileCount = Mathf.Clamp(tileCount, 10, 100);
-        }
-        else
-        {
-            configuredTileCount = 20;
-        }
-
-        if (int.TryParse(playerCountInput.text, out int playerCount))
-        {
-            configuredPlayerCount = Mathf.Clamp(playerCount, 2, 4);
-        }
-        else
-        {
-            configuredPlayerCount = 2;
-        }
-
-        if (createLobbyButton != null) createLobbyButton.interactable = false;
+        // Disable the button while creating lobby
+        if (monopolyButton != null) monopolyButton.interactable = false;
         
-        SetStatusInfo($"Creating dice race lobby for {configuredPlayerCount} players with {configuredTileCount} tiles...");
-        
-        try
-        {
-            string lobbyCode = await LobbyManager.Instance.CreateLobby($"Dice Race - {configuredTileCount} tiles");
-            if (!string.IsNullOrEmpty(lobbyCode))
-            {
-                GameSetupManager.Instance.ConfigureGame(configuredTileCount, configuredPlayerCount);
-                
-                if (lobbyCodeText != null)
-                {
-                    lobbyCodeText.text = $"Lobby Code: {lobbyCode}";
-                }
-                SetStatusSuccess($"Dice race lobby created! Code: {lobbyCode}");
-                ShowLobby();
-                UpdatePlayerList();
-            }
-            else
-            {
-                SetStatusError("Failed to create lobby. Check console for details.");
-            }
-        }
-        catch (System.Exception e)
-        {
-            SetStatusError($"Error creating lobby: {e.Message}");
-            Debug.LogError($"Exception in OnCreateLobbyButtonClicked: {e}");
-        }
-        finally
-        {
-            if (createLobbyButton != null) createLobbyButton.interactable = true;
-        }
-    }
-
-    private async void OnCreateMonopolyLobbyButtonClicked()
-    {
-        Debug.Log("Create Monopoly lobby button clicked");
-        isMonopolyMode = true; // Set to Monopoly mode
-        
-        if (int.TryParse(playerCountInput.text, out int playerCount))
-        {
-            configuredPlayerCount = Mathf.Clamp(playerCount, 2, 4);
-        }
-        else
-        {
-            configuredPlayerCount = 2;
-        }
-
-        if (createMonopolyLobbyButton != null) createMonopolyLobbyButton.interactable = false;
+        // Use default player count of 2 for Monopoly
+        configuredPlayerCount = 2;
         
         SetStatusInfo($"Creating Monopoly lobby for {configuredPlayerCount} players...");
         
@@ -1161,23 +1234,55 @@ public class UIManager : MonoBehaviour
             else
             {
                 SetStatusError("Failed to create Monopoly lobby. Check console for details.");
+                // Stay on game mode selection panel on error
             }
         }
         catch (System.Exception e)
         {
             SetStatusError($"Error creating Monopoly lobby: {e.Message}");
-            Debug.LogError($"Exception in OnCreateMonopolyLobbyButtonClicked: {e}");
+            Debug.LogError($"Exception in OnMonopolyButtonClicked: {e}");
         }
         finally
         {
-            if (createMonopolyLobbyButton != null) createMonopolyLobbyButton.interactable = true;
+            // Re-enable the button
+            if (monopolyButton != null) monopolyButton.interactable = true;
         }
+    }
+
+    private void OnBattleshipsButtonClicked()
+    {
+        Debug.Log("Battleships button clicked");
+        
+        // Set Battleships mode
+        isBattleshipsMode = true;
+        isMonopolyMode = false;
+        
+        // Hide all panels first
+        HideAllPanels();
+        
+        // Let BattleshipsSetupManager handle showing its panel
+        if (BattleshipsSetupManager.Instance != null)
+        {
+            BattleshipsSetupManager.Instance.ShowBattleshipsGameSetup();
+            SetStatusInfo("Configure your Battleships game settings");
+        }
+        else
+        {
+            Debug.LogError("BattleshipsSetupManager instance not found!");
+            SetStatusError("Battleships setup not available");
+        }
+    }
+
+    private void OnBackFromGameModeClicked()
+    {
+        Debug.Log("Back from game mode selection clicked");
+        ShowMainMenu();
     }
 
     private void OnBackFromSetupClicked()
     {
         Debug.Log("Back from setup button clicked");
-        ShowMainMenu();
+        ShowGameModeSelection();
     }
 
     private void OnJoinButtonClicked()
@@ -1223,15 +1328,23 @@ public class UIManager : MonoBehaviour
                 var lobby = await LobbyManager.Instance.GetCurrentLobby();
                 if (lobby != null && lobby.Name != null)
                 {
-                    if (lobby.Name.Contains("Monopoly"))
+                    if (lobby.Name.Contains("Battleships"))
+                    {
+                        isBattleshipsMode = true;
+                        isMonopolyMode = false;
+                        Debug.Log("Detected Battleships mode from lobby name");
+                    }
+                    else if (lobby.Name.Contains("Monopoly"))
                     {
                         isMonopolyMode = true;
-                        Debug.Log("?? Detected Monopoly mode from lobby name");
+                        isBattleshipsMode = false;
+                        Debug.Log("Detected Monopoly mode from lobby name");
                     }
                     else
                     {
                         isMonopolyMode = false;
-                        Debug.Log("?? Detected Dice Race mode from lobby name");
+                        isBattleshipsMode = false;
+                        Debug.Log("Detected Dice Race mode from lobby name");
                     }
                 }
                 
@@ -1270,19 +1383,16 @@ public class UIManager : MonoBehaviour
         ShowMainMenu();
     }
 
-    // Exiting the game
     private void OnExitButtonClicked()
     {
         Debug.Log("Exit button clicked - quitting application");
         #if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false; // Stops play mode if in editor
+            UnityEditor.EditorApplication.isPlaying = false;
         #else
-            Application.Quit(); // Quits the built game
+            Application.Quit();
         #endif
     }
 
-
-    // Updated: Start game button now initializes network game and spawns NetworkGameManager
     private void OnStartGameClicked()
     {
         Debug.Log("Start game button clicked");
@@ -1295,44 +1405,87 @@ public class UIManager : MonoBehaviour
 
         if (startGameButton != null) startGameButton.interactable = false;
         
-        string gameMode = isMonopolyMode ? "Monopoly" : "Dice Race";
+        string gameMode = isBattleshipsMode ? "Battleships" : (isMonopolyMode ? "Monopoly" : "Dice Race");
         SetStatusInfo($"Starting {gameMode}...");
         
         try
         {
-            if (isMonopolyMode)
+            if (isBattleshipsMode)
             {
-                // DON'T generate board here - MonopolyGameManager will do it via ClientRpc for all clients
-                // MonopolyBoardManager.Instance.GenerateBoard(); // REMOVED - causes duplication
+                // Battleships mode
+                SpawnBattleshipsGameManager();
                 
-                // Spawn MonopolyGameManager
+                if (BattleshipsGameManager.Instance != null)
+                {
+                    int actualPlayerCount = LobbyManager.Instance.GetPlayersInfo().Count;
+                    Debug.Log($"Starting Battleships with {actualPlayerCount} actual players in lobby");
+                    
+                    // Initialize game with board configuration from BattleshipsSetupManager
+                    if (BattleshipsSetupManager.Instance != null)
+                    {
+                        int rows = BattleshipsSetupManager.Instance.GetMaxRows();
+                        int cols = BattleshipsSetupManager.Instance.GetMaxColumns();
+                        bool[,] tileStates = BattleshipsSetupManager.Instance.GetTileStates();
+                        
+                        Debug.Log($"Board config from setup: {rows}x{cols}, IsCustomized={BattleshipsSetupManager.Instance.IsCustomized()}, tileStates={(tileStates != null ? "NOT NULL" : "NULL")}")
+;
+                        if (tileStates != null && BattleshipsSetupManager.Instance.IsCustomized())
+                        {
+                            // Use custom board layout
+                            BattleshipsGameManager.Instance.InitializeGame(actualPlayerCount, rows, cols, tileStates);
+                            Debug.Log($"? Initialized Battleships with custom board: {rows}x{cols}");
+                            
+                            // Clear grid state after successful initialization
+                            BattleshipsSetupManager.Instance.ClearGridState();
+                        }
+                        else
+                        {
+                            // Use default board (all tiles active)
+                            BattleshipsGameManager.Instance.InitializeGameWithDefaultBoard(actualPlayerCount, rows, cols);
+                            Debug.Log($"? Initialized Battleships with default board: {rows}x{cols}");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning("BattleshipsSetupManager not found! Using default 10x10 board");
+                        BattleshipsGameManager.Instance.InitializeGameWithDefaultBoard(actualPlayerCount, 10, 10);
+                    }
+                    
+                    Debug.Log("BattleshipsGameManager initialized - board generation will happen in ShowGamePanel");
+                    
+                    // Explicitly show game panel (which will generate boards and show UI)
+                    ShowGamePanel();
+                }
+            }
+            else if (isMonopolyMode)
+            {
                 SpawnMonopolyGameManager();
                 
-                // Initialize the Monopoly game (which will trigger StartGameClientRpc that generates the board)
                 if (MonopolyGameManager.Instance != null)
                 {
                     int actualPlayerCount = LobbyManager.Instance.GetPlayersInfo().Count;
                     Debug.Log($"Starting Monopoly with {actualPlayerCount} actual players in lobby");
                     
                     MonopolyGameManager.Instance.InitializeGame(actualPlayerCount);
+                    
+                    // Explicitly show game panel
+                    ShowGamePanel();
                 }
             }
             else
             {
-                // Generate the board using the stored configuration
                 GameSetupManager.Instance.GenerateBoard();
-                
-                // Spawn NetworkGameManager if not already spawned
                 SpawnNetworkGameManager();
                 
-                // Initialize the multiplayer game with actual lobby player count
                 if (NetworkGameManager.Instance != null)
                 {
-                    // Get the actual number of players in the lobby (not configured count)
                     int actualPlayerCount = LobbyManager.Instance.GetPlayersInfo().Count;
                     Debug.Log($"Starting dice race with {actualPlayerCount} actual players in lobby");
                     
                     NetworkGameManager.Instance.InitializeGame(actualPlayerCount);
+                    
+                    // Explicitly show game panel
+                    ShowGamePanel();
                 }
             }
             
@@ -1352,27 +1505,23 @@ public class UIManager : MonoBehaviour
 
     private void SpawnMonopolyGameManager()
     {
-        // Check if MonopolyGameManager already exists
         if (MonopolyGameManager.Instance != null && MonopolyGameManager.Instance.IsSpawned)
         {
             Debug.Log("MonopolyGameManager already spawned");
             return;
         }
 
-        // Only host should spawn the MonopolyGameManager
         if (NetworkManager.Instance.IsHost())
         {
             Debug.Log("Spawning MonopolyGameManager...");
             
-            // Get Unity's NetworkManager component through our custom wrapper
             var unityNetworkManager = NetworkManager.Instance.GetUnityNetworkManager();
             if (unityNetworkManager == null)
             {
-                Debug.LogError("Unity's NetworkManager component not found! Please add Unity's NetworkManager component to the Managers GameObject.");
+                Debug.LogError("Unity's NetworkManager component not found!");
                 return;
             }
 
-            // Find the MonopolyGameManager prefab in the Network Prefabs list
             GameObject monopolyGameManagerPrefab = null;
             
             if (unityNetworkManager.NetworkConfig != null && unityNetworkManager.NetworkConfig.Prefabs != null)
@@ -1389,7 +1538,6 @@ public class UIManager : MonoBehaviour
             
             if (monopolyGameManagerPrefab != null)
             {
-                // Instantiate and spawn the prefab from Network Prefabs list
                 GameObject instance = Instantiate(monopolyGameManagerPrefab);
                 Unity.Netcode.NetworkObject networkObject = instance.GetComponent<Unity.Netcode.NetworkObject>();
                 networkObject.Spawn();
@@ -1397,9 +1545,8 @@ public class UIManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError("MonopolyGameManager prefab not found in Network Prefabs list! Please add it to Unity's NetworkManager ? Network Prefabs.");
+                Debug.LogError("MonopolyGameManager prefab not found in Network Prefabs list!");
                 
-                // Fallback: Create dynamically (not recommended for production)
                 GameObject monopolyGameManagerGO = new GameObject("MonopolyGameManager");
                 MonopolyGameManager monopolyGameManager = monopolyGameManagerGO.AddComponent<MonopolyGameManager>();
                 Unity.Netcode.NetworkObject networkObject = monopolyGameManagerGO.AddComponent<Unity.Netcode.NetworkObject>();
@@ -1408,14 +1555,12 @@ public class UIManager : MonoBehaviour
                 Debug.LogWarning("MonopolyGameManager spawned dynamically as fallback");
             }
             
-            // Also spawn MonopolyTradeManager
             SpawnMonopolyTradeManager();
         }
     }
     
     private void SpawnMonopolyTradeManager()
     {
-        // Check if MonopolyTradeManager already exists
         if (MonopolyTradeManager.Instance != null && MonopolyTradeManager.Instance.IsSpawned)
         {
             Debug.Log("MonopolyTradeManager already spawned");
@@ -1424,7 +1569,6 @@ public class UIManager : MonoBehaviour
 
         Debug.Log("Spawning MonopolyTradeManager...");
         
-        // Get Unity's NetworkManager component
         var unityNetworkManager = NetworkManager.Instance.GetUnityNetworkManager();
         if (unityNetworkManager == null)
         {
@@ -1432,7 +1576,6 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        // Find the MonopolyTradeManager prefab in the Network Prefabs list
         GameObject tradeManagerPrefab = null;
         
         if (unityNetworkManager.NetworkConfig != null && unityNetworkManager.NetworkConfig.Prefabs.Prefabs != null)
@@ -1449,52 +1592,100 @@ public class UIManager : MonoBehaviour
         
         if (tradeManagerPrefab != null)
         {
-            // Instantiate and spawn the prefab
             GameObject instance = Instantiate(tradeManagerPrefab);
             Unity.Netcode.NetworkObject networkObject = instance.GetComponent<Unity.Netcode.NetworkObject>();
             networkObject.Spawn();
-            Debug.Log("? MonopolyTradeManager spawned from Network Prefabs list");
+            Debug.Log("MonopolyTradeManager spawned from Network Prefabs list");
         }
         else
         {
-            Debug.LogError("? MonopolyTradeManager prefab not found in Network Prefabs list! Please add it to Unity's NetworkManager ? Network Prefabs.");
+            Debug.LogError("MonopolyTradeManager prefab not found in Network Prefabs list!");
             
-            // Fallback: Create dynamically
             GameObject tradeManagerGO = new GameObject("MonopolyTradeManager");
             MonopolyTradeManager tradeManager = tradeManagerGO.AddComponent<MonopolyTradeManager>();
             Unity.Netcode.NetworkObject networkObject = tradeManagerGO.AddComponent<Unity.Netcode.NetworkObject>();
             
             networkObject.Spawn();
-            Debug.LogWarning("?? MonopolyTradeManager spawned dynamically as fallback");
+            Debug.LogWarning("MonopolyTradeManager spawned dynamically as fallback");
+        }
+    }
+
+    private void SpawnBattleshipsGameManager()
+    {
+        if (BattleshipsGameManager.Instance != null && BattleshipsGameManager.Instance.IsSpawned)
+        {
+            Debug.Log("BattleshipsGameManager already spawned");
+            return;
+        }
+
+        if (NetworkManager.Instance.IsHost())
+        {
+            Debug.Log("Spawning BattleshipsGameManager...");
+            
+            var unityNetworkManager = NetworkManager.Instance.GetUnityNetworkManager();
+            if (unityNetworkManager == null)
+            {
+                Debug.LogError("Unity's NetworkManager component not found!");
+                return;
+            }
+
+            GameObject battleshipsGameManagerPrefab = null;
+            
+            if (unityNetworkManager.NetworkConfig != null && unityNetworkManager.NetworkConfig.Prefabs != null)
+            {
+                foreach (var networkPrefab in unityNetworkManager.NetworkConfig.Prefabs.Prefabs)
+                {
+                    if (networkPrefab.Prefab != null && networkPrefab.Prefab.GetComponent<BattleshipsGameManager>() != null)
+                    {
+                        battleshipsGameManagerPrefab = networkPrefab.Prefab;
+                        break;
+                    }
+                }
+            }
+            
+            if (battleshipsGameManagerPrefab != null)
+            {
+                GameObject instance = Instantiate(battleshipsGameManagerPrefab);
+                Unity.Netcode.NetworkObject networkObject = instance.GetComponent<Unity.Netcode.NetworkObject>();
+                networkObject.Spawn();
+                Debug.Log("BattleshipsGameManager spawned from Network Prefabs list");
+            }
+            else
+            {
+                Debug.LogWarning("BattleshipsGameManager prefab not found in Network Prefabs list - using fallback!");
+                
+                GameObject battleshipsGameManagerGO = new GameObject("BattleshipsGameManager");
+                BattleshipsGameManager battleshipsGameManager = battleshipsGameManagerGO.AddComponent<BattleshipsGameManager>();
+                Unity.Netcode.NetworkObject networkObject = battleshipsGameManagerGO.AddComponent<Unity.Netcode.NetworkObject>();
+                
+                networkObject.Spawn();
+                Debug.Log("BattleshipsGameManager spawned dynamically (fallback method working)");
+            }
         }
     }
 
     private void SpawnNetworkGameManager()
     {
-        // Check if NetworkGameManager already exists
         if (NetworkGameManager.Instance != null && NetworkGameManager.Instance.IsSpawned)
         {
             Debug.Log("NetworkGameManager already spawned");
             return;
         }
 
-        // Only host should spawn the NetworkGameManager
         if (NetworkManager.Instance.IsHost())
         {
             Debug.Log("Spawning NetworkGameManager...");
             
-            // Get Unity's NetworkManager component through our custom wrapper
             var unityNetworkManager = NetworkManager.Instance.GetUnityNetworkManager();
             if (unityNetworkManager == null)
             {
-                Debug.LogError("Unity's NetworkManager component not found! Please add Unity's NetworkManager component to the Managers GameObject.");
+                Debug.LogError("Unity's NetworkManager component not found!");
                 return;
             }
 
-            // Find the NetworkGameManager prefab in the Network Prefabs list
             GameObject networkGameManagerPrefab = null;
             
-            if (unityNetworkManager.NetworkConfig != null && unityNetworkManager.NetworkConfig.Prefabs.Prefabs != null)
+            if (unityNetworkManager.NetworkConfig != null && unityNetworkManager.NetworkConfig.Prefabs != null)
             {
                 foreach (var networkPrefab in unityNetworkManager.NetworkConfig.Prefabs.Prefabs)
                 {
@@ -1508,7 +1699,6 @@ public class UIManager : MonoBehaviour
             
             if (networkGameManagerPrefab != null)
             {
-                // Instantiate and spawn the prefab from Network Prefabs list
                 GameObject instance = Instantiate(networkGameManagerPrefab);
                 Unity.Netcode.NetworkObject networkObject = instance.GetComponent<Unity.Netcode.NetworkObject>();
                 networkObject.Spawn();
@@ -1516,9 +1706,8 @@ public class UIManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError("NetworkGameManager prefab not found in Network Prefabs list! Please add it to Unity's NetworkManager ? Network Prefabs.");
+                Debug.LogError("NetworkGameManager prefab not found in Network Prefabs list!");
                 
-                // Fallback: Create dynamically (not recommended for production)
                 GameObject networkGameManagerGO = new GameObject("NetworkGameManager");
                 NetworkGameManager networkGameManager = networkGameManagerGO.AddComponent<NetworkGameManager>();
                 Unity.Netcode.NetworkObject networkObject = networkGameManagerGO.AddComponent<Unity.Netcode.NetworkObject>();
@@ -1527,6 +1716,98 @@ public class UIManager : MonoBehaviour
                 Debug.LogWarning("NetworkGameManager spawned dynamically as fallback");
             }
         }
+    }
+
+    private async void OnCreateLobbyButtonClicked()
+    {
+        Debug.Log($"Create lobby button clicked - Mode: {(isMonopolyMode ? "Monopoly" : "Dice Race")}");
+
+        // Parse player count (used by both modes)
+        if (int.TryParse(playerCountInput.text, out int playerCount))
+        {
+            configuredPlayerCount = Mathf.Clamp(playerCount, 2, 4);
+        }
+        else
+        {
+            configuredPlayerCount = 2;
+        }
+
+        if (createLobbyButton != null) createLobbyButton.interactable = false;
+        
+        if (isMonopolyMode)
+        {
+            // Monopoly mode - no tile count needed
+            SetStatusInfo($"Creating Monopoly lobby for {configuredPlayerCount} players...");
+            
+            try
+            {
+                string lobbyCode = await LobbyManager.Instance.CreateLobby($"Monopoly - {configuredPlayerCount} players");
+                if (!string.IsNullOrEmpty(lobbyCode))
+                {
+                    MonopolyBoardManager.Instance.ConfigureGame(configuredPlayerCount);
+                    
+                    if (lobbyCodeText != null)
+                    {
+                        lobbyCodeText.text = $"Lobby Code: {lobbyCode}";
+                    }
+                    SetStatusSuccess($"Monopoly lobby created! Code: {lobbyCode}");
+                    ShowLobby();
+                    UpdatePlayerList();
+                }
+                else
+                {
+                    SetStatusError("Failed to create Monopoly lobby. Check console for details.");
+                }
+            }
+            catch (System.Exception e)
+            {
+                SetStatusError($"Error creating Monopoly lobby: {e.Message}");
+                Debug.LogError($"Exception in OnCreateLobbyButtonClicked (Monopoly): {e}");
+            }
+        }
+        else
+        {
+            // Dice Race mode - parse tile count
+            if (int.TryParse(tileCountInput.text, out int tileCount))
+            {
+                configuredTileCount = Mathf.Clamp(tileCount, 10, 100);
+            }
+            else
+            {
+                configuredTileCount = 20;
+            }
+            
+            SetStatusInfo($"Creating dice race lobby for {configuredPlayerCount} players with {configuredTileCount} tiles...");
+            
+            try
+            {
+                string lobbyCode = await LobbyManager.Instance.CreateLobby($"Dice Race - {configuredTileCount} tiles");
+                if (!string.IsNullOrEmpty(lobbyCode))
+                {
+                    GameSetupManager.Instance.ConfigureGame(configuredTileCount, configuredPlayerCount);
+                    
+                    if (lobbyCodeText != null)
+                    {
+                        lobbyCodeText.text = $"Lobby Code: {lobbyCode}";
+                    }
+                    SetStatusSuccess($"Dice race lobby created! Code: {lobbyCode}");
+                    ShowLobby();
+                    UpdatePlayerList();
+                }
+                else
+                {
+                    SetStatusError("Failed to create lobby. Check console for details.");
+                }
+            }
+            catch (System.Exception e)
+            {
+                SetStatusError($"Error creating lobby: {e.Message}");
+                Debug.LogError($"Exception in OnCreateLobbyButtonClicked (Dice Race): {e}");
+            }
+        }
+        
+        // Re-enable button
+        if (createLobbyButton != null) createLobbyButton.interactable = true;
     }
 
     private async void OnLeaveLobbyClicked()
@@ -1558,7 +1839,6 @@ public class UIManager : MonoBehaviour
     {
         if (playerListContent == null || playerListItemPrefab == null) 
         {
-            Debug.LogWarning("PlayerListContent or PlayerListItemPrefab is null, cannot update player list");
             return;
         }
 
@@ -1575,8 +1855,6 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"Updating player list with {players.Count} players");
-
         foreach (var playerInfo in players)
         {
             GameObject playerItem = Instantiate(playerListItemPrefab, playerListContent);
@@ -1590,12 +1868,6 @@ public class UIManager : MonoBehaviour
                 playerText.enableAutoSizing = false;
                 playerText.fontSize = 14;
                 playerText.alignment = TextAlignmentOptions.Center;
-                
-                Debug.Log($"Created player item: {playerText.text}");
-            }
-            else
-            {
-                Debug.LogError("PlayerListItemPrefab must have a TextMeshProUGUI component!");
             }
 
             RectTransform rectTransform = playerItem.GetComponent<RectTransform>();
@@ -1636,7 +1908,6 @@ public class UIManager : MonoBehaviour
             }
         }
         
-        // Update game panel UI when game is active
         if (isMonopolyMode && monopolyGamePanel != null && monopolyGamePanel.activeSelf)
         {
             if (MonopolyGameManager.Instance != null)
@@ -1653,7 +1924,6 @@ public class UIManager : MonoBehaviour
             }
         }
         
-        // Check if game managers were spawned and we need to resubscribe
         if (isMonopolyMode)
         {
             if (MonopolyGameManager.Instance != null && MonopolyGameManager.Instance.IsSpawned)
@@ -1669,9 +1939,7 @@ public class UIManager : MonoBehaviour
             }
         }
     }
-    
-    private bool isSubscribedToNetworkEvents = false;
-    
+
     private void EnsureNetworkEventSubscription()
     {
         if (!isSubscribedToNetworkEvents)
@@ -1679,80 +1947,186 @@ public class UIManager : MonoBehaviour
             if ((isMonopolyMode && MonopolyGameManager.Instance != null) || 
                 (!isMonopolyMode && NetworkGameManager.Instance != null))
             {
-                Debug.Log("Late subscribing to game manager events...");
                 SubscribeToNetworkEvents();
                 isSubscribedToNetworkEvents = true;
             }
         }
     }
 
+    #region Public API for External Managers
+
     /// <summary>
-    /// Force refresh of UIManager component in inspector
-    /// Call this from a context menu or button to refresh the inspector
+    /// Public method to set status info message
     /// </summary>
-    [ContextMenu("Refresh UIManager Component")]
-    public void RefreshUIManagerComponent()
+    public void SetStatusInfoPublic(string message) => SetStatusInfo(message);
+
+    /// <summary>
+    /// Public method to set status error message
+    /// </summary>
+    public void SetStatusErrorPublic(string message) => SetStatusError(message);
+
+    /// <summary>
+    /// Public method to set status success message
+    /// </summary>
+    public void SetStatusSuccessPublic(string message) => SetStatusSuccess(message);
+
+    /// <summary>
+    /// Public method to set lobby code text
+    /// </summary>
+    public void SetLobbyCode(string code)
     {
-        Debug.Log("UIManager component refreshed. Check inspector for new fields.");
-        
-        // Force Unity to refresh the inspector
-        #if UNITY_EDITOR
-        UnityEditor.EditorUtility.SetDirty(this);
-        #endif
+        if (lobbyCodeText != null)
+        {
+            lobbyCodeText.text = $"Lobby Code: {code}";
+        }
     }
 
     /// <summary>
-    /// Validate all UI references and log missing assignments
+    /// Public method to update player list
     /// </summary>
+    public void UpdatePlayerListPublic() => UpdatePlayerList();
+
+    #endregion
+
     [ContextMenu("Validate All UI References")]
     public void ValidateAllUIReferences()
     {
         Debug.Log("=== UIManager Reference Validation ===");
         
-        // Count missing references
         int missingCount = 0;
         
-        // Check all fields and log status
-        if (mainMenuPanel == null) { Debug.LogError("? MainMenuPanel is missing!"); missingCount++; }
-        else Debug.Log("? MainMenuPanel assigned");
+        if (mainMenuPanel == null) { Debug.LogError("MainMenuPanel is missing!"); missingCount++; }
+        else Debug.Log("MainMenuPanel assigned");
         
-        if (gameSetupPanel == null) { Debug.LogError("? GameSetupPanel is missing!"); missingCount++; }
-        else Debug.Log("? GameSetupPanel assigned");
+        if (gameModeSelectionPanel == null) { Debug.LogError("GameModeSelectionPanel is missing!"); missingCount++; }
+        else Debug.Log("GameModeSelectionPanel assigned");
         
-        if (createMonopolyLobbyButton == null) { Debug.LogError("?? CreateMonopolyLobbyButton is missing! (NEW)"); missingCount++; }
-        else Debug.Log("? CreateMonopolyLobbyButton assigned");
+        if (gameSetupPanel == null) { Debug.LogError("GameSetupPanel is missing!"); missingCount++; }
+        else Debug.Log("GameSetupPanel assigned");
         
-        if (purchasePropertyButton == null) { Debug.LogError("?? PurchasePropertyButton is missing! (NEW)"); missingCount++; }
-        else Debug.Log("? PurchasePropertyButton assigned");
+        if (diceRaceGamePanel == null) { Debug.LogError("DiceRaceGamePanel is missing!"); missingCount++; }
+        else Debug.Log("DiceRaceGamePanel assigned");
         
-        if (playerMoneyText == null) { Debug.LogError("?? PlayerMoneyText is missing! (NEW)"); missingCount++; }
-        else Debug.Log("? PlayerMoneyText assigned");
+        if (monopolyGamePanel == null) { Debug.LogError("MonopolyGamePanel is missing!"); missingCount++; }
+        else Debug.Log("MonopolyGamePanel assigned");
         
-        if (gameMessagesText == null) Debug.LogError("? GameMessagesText is not assigned in UIManager!");
+        if (hostButton == null) { Debug.LogError("HostButton is missing!"); missingCount++; }
+        else Debug.Log("HostButton assigned");
+        
+        if (joinButton == null) { Debug.LogError("JoinButton is missing!"); missingCount++; }
+        else Debug.Log("JoinButton assigned");
+        
+        if (exitButton == null) { Debug.LogError("ExitButton is missing!"); missingCount++; }
+        else Debug.Log("ExitButton assigned");
+        
+        // Game Mode Selection Panel validation
+        if (diceRaceButton == null) { Debug.LogError("DiceRaceButton is missing!"); missingCount++; }
+        else Debug.Log("DiceRaceButton assigned");
+        
+        if (monopolyButton == null) { Debug.LogError("MonopolyButton is missing!"); missingCount++; }
+        else Debug.Log("MonopolyButton assigned");
+        
+        if (battleshipsButton == null) { Debug.LogError("BattleshipsButton is missing!"); missingCount++; }
+        else Debug.Log("BattleshipsButton assigned");
+        
+        if (backFromGameModeButton == null) { Debug.LogError("BackFromGameModeButton is missing!"); missingCount++; }
+        else Debug.Log("BackFromGameModeButton assigned");
+        
+        if (tileCountInput == null) { Debug.LogError("TileCountInput is missing!"); missingCount++; }
+        else Debug.Log("TileCountInput assigned");
+        
+        if (playerCountInput == null) { Debug.LogError("PlayerCountInput is missing!"); missingCount++; }
+        else Debug.Log("PlayerCountInput assigned");
+        
+        if (createLobbyButton == null) { Debug.LogError("CreateLobbyButton is missing!"); missingCount++; }
+        else Debug.Log("CreateLobbyButton assigned");
+        
+        if (backFromSetupButton == null) { Debug.LogError("BackFromSetupButton is missing!"); missingCount++; }
+        else Debug.Log("BackFromSetupButton assigned");
+        
+        if (submitJoinButton == null) { Debug.LogError("SubmitJoinButton is missing!"); missingCount++; }
+        else Debug.Log("SubmitJoinButton assigned");
+        
+        if (backToMenuButton == null) { Debug.LogError("BackToMenuButton is missing!"); missingCount++; }
+        else Debug.Log("BackToMenuButton assigned");
+        
+        if (startGameButton == null) { Debug.LogError("StartGameButton is missing!"); missingCount++; }
+        else Debug.Log("StartGameButton assigned");
+        
+        if (leaveLobbyButton == null) { Debug.LogError("LeaveLobbyButton is missing!"); missingCount++; }
+        else Debug.Log("LeaveLobbyButton assigned");
+        
+        if (joinCodeInput == null) { Debug.LogError("JoinCodeInput is missing!"); missingCount++; }
+        else Debug.Log("JoinCodeInput assigned");
+        
+        if (lobbyCodeText == null) { Debug.LogError("LobbyCodeText is missing!"); missingCount++; }
+        else Debug.Log("LobbyCodeText assigned");
+        
+        if (playerListContent == null) { Debug.LogError("PlayerListContent is missing!"); missingCount++; }
+        else Debug.Log("PlayerListContent assigned");
+        
+        if (playerListItemPrefab == null) { Debug.LogError("PlayerListItemPrefab is missing!"); missingCount++; }
+        else Debug.Log("PlayerListItemPrefab assigned");
+        
+        if (statusText == null) { Debug.LogError("StatusText is missing!"); missingCount++; }
+        else Debug.Log("StatusText assigned");
+        
+        // Dice Race panel validation
+        if (diceRaceCurrentPlayerText == null) { Debug.LogError("DiceRaceCurrentPlayerText is missing!"); missingCount++; }
+        else Debug.Log("DiceRaceCurrentPlayerText assigned");
+        
+        if (diceRaceGameStatusText == null) { Debug.LogError("DiceRaceGameStatusText is missing!"); missingCount++; }
+        else Debug.Log("DiceRaceGameStatusText assigned");
+        
+        if (diceRaceRollDiceButton == null) { Debug.LogError("DiceRaceRollDiceButton is missing!"); missingCount++; }
+        else Debug.Log("DiceRaceRollDiceButton assigned");
+        
+        if (diceRaceDiceResultText == null) { Debug.LogError("DiceRaceDiceResultText is missing!"); missingCount++; }
+        else Debug.Log("DiceRaceDiceResultText assigned");
+        
+        if (diceRaceLeaveGameButton == null) { Debug.LogError("DiceRaceLeaveGameButton is missing!"); missingCount++; }
+        else Debug.Log("DiceRaceLeaveGameButton assigned");
+        
+        // Monopoly panel validation
+        if (monopolyCurrentPlayerText == null) { Debug.LogError("MonopolyCurrentPlayerText is missing!"); missingCount++; }
+        else Debug.Log("MonopolyCurrentPlayerText assigned");
+        
+        if (monopolyGameStatusText == null) { Debug.LogError("MonopolyGameStatusText is missing!"); missingCount++; }
+        else Debug.Log("MonopolyGameStatusText assigned");
+        
+        if (monopolyRollDiceButton == null) { Debug.LogError("MonopolyRollDiceButton is missing!"); missingCount++; }
+        else Debug.Log("MonopolyRollDiceButton assigned");
+        
+        if (purchasePropertyButton == null) { Debug.LogError("PurchasePropertyButton is missing!"); missingCount++; }
+        else Debug.Log("PurchasePropertyButton assigned");
+        
+        if (playerMoneyText == null) { Debug.LogError("PlayerMoneyText is missing!"); missingCount++; }
+        else Debug.Log("PlayerMoneyText assigned");
+        
+        if (gameMessagesText == null) { Debug.LogError("GameMessagesText is missing!"); missingCount++; }
+        else Debug.Log("GameMessagesText assigned");
+        
         if (cardMessagesText == null) Debug.LogWarning("CardMessagesText is not assigned (optional - cards will show in game messages)");
         
         Debug.Log($"=== Validation Complete: {missingCount} missing references ===");
         
         if (missingCount > 0)
         {
-            Debug.LogWarning("?? You need to assign the missing UI elements in the Inspector!");
-            Debug.LogWarning("?? Tip: Look for fields marked with (NEW) - these are for Monopoly mode");
+            Debug.LogWarning("You need to assign the missing UI elements in the Inspector!");
+            Debug.LogWarning("Tip: Look for NEW fields in the Game Mode Selection Panel section");
         }
         else
         {
-            Debug.Log("? All UI references are properly assigned!");
+            Debug.Log("All UI references are properly assigned!");
         }
     }
 
-    /// <summary>
-    /// Toggle between Monopoly and Dice Race mode (for testing)
-    /// </summary>
     [ContextMenu("Toggle Game Mode (Testing)")]
     public void ToggleGameMode()
     {
         isMonopolyMode = !isMonopolyMode;
         string mode = isMonopolyMode ? "Monopoly" : "Dice Race";
-        Debug.Log($"?? Game mode switched to: {mode}");
+        Debug.Log($"Game mode switched to: {mode}");
         
         #if UNITY_EDITOR
         UnityEditor.EditorUtility.SetDirty(this);

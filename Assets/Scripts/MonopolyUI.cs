@@ -154,10 +154,13 @@ public class MonopolyUI : MonoBehaviour
             Debug.LogWarning("?? Toggle Game Log button is not assigned in MonopolyUI!");
         }
 
-        // Initialize game log
+        // Configure Game Log Text
         if (gameLogText != null)
         {
             gameLogText.text = "Welcome to Monopoly!\n";
+            gameLogText.fontSize = 20; // Increased font size for better readability
+            gameLogText.color = Color.black; // Black text color
+            Debug.Log("? Game log text configured: fontSize=20, color=black");
         }
         
         // Setup dynamic player status displays (will be populated when game starts)
@@ -211,8 +214,10 @@ public class MonopolyUI : MonoBehaviour
                 {
                     playerStatusTexts.Add(statusText);
                     statusText.text = $"Player {i + 1}: $1500";
+                    statusText.fontSize = 24; // Increased font size for player status
+                    statusText.color = Color.black; // Black text color
                     statusText.gameObject.SetActive(true); // Ensure it's visible
-                    Debug.Log($"? Created player status display for Player {i + 1}");
+                    Debug.Log($"? Created player status display for Player {i + 1} (fontSize=24, color=black)");
                 }
                 else
                 {
@@ -241,7 +246,10 @@ public class MonopolyUI : MonoBehaviour
                 if (fixedPlayerStatusTexts[i] != null)
                 {
                     playerStatusTexts.Add(fixedPlayerStatusTexts[i]);
+                    fixedPlayerStatusTexts[i].fontSize = 24; // Configure fixed array items too
+                    fixedPlayerStatusTexts[i].color = Color.black;
                     fixedPlayerStatusTexts[i].gameObject.SetActive(true);
+                    Debug.Log($"? Configured fixed player status display {i} (fontSize=24, color=black)");
                 }
             }
             Debug.Log($"?? Using fixed player status array with {playerStatusTexts.Count} displays");
