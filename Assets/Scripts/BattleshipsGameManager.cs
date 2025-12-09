@@ -657,10 +657,18 @@ public class BattleshipsGameManager : NetworkBehaviour
     /// </summary>
     private void StartGamePhase()
     {
+        if (!IsServer)
+        {
+            Debug.LogWarning("Only server can start game phase!");
+            return;
+        }
+        
         gameState.Value = GameState.InProgress;
         currentPlayerTurn.Value = 0;
         
-        Debug.Log("All players have placed their ships - Game starting!");
+        Debug.Log("[Server] All players have placed their ships - Starting combat phase!");
+        
+        // Notify all clients to show combat UI
         NotifyGameStartedClientRpc();
     }
 
@@ -735,9 +743,11 @@ public class BattleshipsGameManager : NetworkBehaviour
             });
         }
 
-        // Check for game over
+        // NEW: Notify all clients if a player was eliminated
         if (result == AttackResult.Eliminated)
         {
+            Debug.Log($"[Server] Player {targetPlayerId} has been eliminated - notifying all clients");
+            NotifyPlayerEliminatedClientRpc(targetPlayerId);
             CheckForGameOver();
         }
 
@@ -784,6 +794,15 @@ public class BattleshipsGameManager : NetworkBehaviour
             NotifyGameOverClientRpc(winnerId);
         }
     }
+
+    #endregion
+
+    #region Events
+
+    /// <summary>
+    /// Event fired when a player is eliminated from the game
+    /// </summary>
+    public static event System.Action<int> OnPlayerEliminated;
 
     #endregion
 
@@ -875,12 +894,17 @@ public class BattleshipsGameManager : NetworkBehaviour
     [ClientRpc]
     private void NotifyGameStartedClientRpc()
     {
-        Debug.Log("[Client] Game has started!");
+        Debug.Log($"[{(IsServer ? "Server/Host" : "Client")}] Combat phase starting - all players finished placing ships");
         
-        // Update UI to combat phase
+        // Update UI to combat phase for ALL clients (including host)
         if (BattleshipsUIManager.Instance != null)
         {
+            Debug.Log($"[{(IsServer ? "Server/Host" : "Client")}] Showing combat panel via OnGameStateChanged");
             BattleshipsUIManager.Instance.OnGameStateChanged(GameState.InProgress);
+        }
+        else
+        {
+            Debug.LogError($"[{(IsServer ? "Server/Host" : "Client")}] BattleshipsUIManager.Instance is null - cannot show combat UI!");
         }
     }
 
@@ -906,6 +930,35 @@ public class BattleshipsGameManager : NetworkBehaviour
         if (BattleshipsUIManager.Instance != null)
         {
             BattleshipsUIManager.Instance.OnGameOver(winnerId);
+        }
+    }
+    
+    /// <summary>
+    /// Notify all clients that a player has been eliminated
+    /// </summary>
+    [ClientRpc]
+    private void NotifyPlayerEliminatedClientRpc(int eliminatedPlayerId)
+    {
+        Debug.Log($"[Client] Player {eliminatedPlayerId} has been eliminated from the game");
+        
+        // CRITICAL FIX: Update the eliminated player's board state on ALL clients
+        if (playerBoards.ContainsKey(eliminatedPlayerId))
+        {
+            playerBoards[eliminatedPlayerId].isEliminated = true;
+            Debug.Log($"[Client] Marked Player {eliminatedPlayerId} as eliminated locally");
+        }
+        else
+        {
+            Debug.LogError($"[Client] Cannot mark Player {eliminatedPlayerId} as eliminated - board not found locally!");
+        }
+        
+        // Fire the static event so UI can respond
+        OnPlayerEliminated?.Invoke(eliminatedPlayerId);
+        
+        // Update UI to remove this player from targeting options
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.OnPlayerEliminated(eliminatedPlayerId);
         }
     }
     
@@ -1078,6 +1131,34 @@ public class BattleshipsGameManager : NetworkBehaviour
     /// Get the total number of players in the game
     /// </summary>
     public int GetTotalPlayers() => playerCount;
+    
+    /// <summary>
+    /// Check if a player is eliminated
+    /// </summary>
+    public bool IsPlayerEliminated(int playerId)
+    {
+        if (playerBoards.ContainsKey(playerId))
+        {
+            return playerBoards[playerId].isEliminated;
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Get list of alive (non-eliminated) player IDs
+    /// </summary>
+    public List<int> GetAlivePlayers()
+    {
+        List<int> alivePlayers = new List<int>();
+        for (int i = 0; i < playerCount; i++)
+        {
+            if (playerBoards.ContainsKey(i) && !playerBoards[i].isEliminated)
+            {
+                alivePlayers.Add(i);
+            }
+        }
+        return alivePlayers;
+    }
 
     #endregion
 

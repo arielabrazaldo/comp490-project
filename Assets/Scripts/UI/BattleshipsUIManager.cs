@@ -80,7 +80,7 @@ public class BattleshipsUIManager : MonoBehaviour
     private bool isHorizontalPlacement = true;
     private int localPlayerId = -1;
     private int selectedTargetPlayerId = -1;
-    
+
     // Preview state
     private Vector2Int hoveredTilePosition = new Vector2Int(-1, -1);
     private List<GameObject> previewTiles = new List<GameObject>();
@@ -95,7 +95,7 @@ public class BattleshipsUIManager : MonoBehaviour
     };
 
     // Track local ship placements for UI display
-    private Dictionary<BattleshipsGameManager.ShipType, (Vector2Int startPos, bool isHorizontal)> localShipPlacements = 
+    private Dictionary<BattleshipsGameManager.ShipType, (Vector2Int startPos, bool isHorizontal)> localShipPlacements =
         new Dictionary<BattleshipsGameManager.ShipType, (Vector2Int, bool)>();
 
     // Board tile references for visual updates
@@ -125,7 +125,7 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         // Start with all panels hidden
         HideAllPanels();
-        
+
         // Don't set localPlayerId here - it will be fetched when needed
         // This ensures we get the correct ID after network connection
         Debug.Log("? BattleshipsUIManager started");
@@ -134,7 +134,7 @@ public class BattleshipsUIManager : MonoBehaviour
     private void Update()
     {
         // Handle keyboard input during ship placement
-        if (BattleshipsGameManager.Instance != null && 
+        if (BattleshipsGameManager.Instance != null &&
             BattleshipsGameManager.Instance.GetGameState() == BattleshipsGameManager.GameState.PlacingShips)
         {
             HandleShipPlacementInput();
@@ -259,82 +259,88 @@ public class BattleshipsUIManager : MonoBehaviour
     public void ShowShipPlacementPanel()
     {
         HideAllPanels();
-        
+
         // Activate parent container first
         if (battleShipPanels) battleShipPanels.SetActive(true);
-        
+
         if (shipPlacementPanel) shipPlacementPanel.SetActive(true);
-        
+
         // CRITICAL: Activate BoardPanel with ONLY player board visible
-        if (boardPanel) 
+        if (boardPanel)
         {
             boardPanel.SetActive(true);
             Debug.Log("? BoardPanel activated for ship placement");
         }
-        
+
         // Show ONLY player board for ship placement
         if (playerBoardParent != null)
         {
             playerBoardParent.gameObject.SetActive(true);
             Debug.Log("? Player board activated for ship placement");
         }
-        
+
         // Ensure enemy board stays HIDDEN during ship placement
         if (enemyBoardParent != null)
         {
             enemyBoardParent.gameObject.SetActive(false);
             Debug.Log("?? Enemy board kept hidden during ship placement");
         }
-        
+
         // CRITICAL FIX: Reset ship placement state when showing panel
         ResetShipPlacementState();
-        
+
         // Auto-select first ship (Carrier) for convenience
         SelectShip(BattleshipsGameManager.ShipType.Carrier);
-        
+
         UpdateShipPlacementUI();
         UpdateInstructionsText();
-        
+
         Debug.Log("? Ship placement panel shown - Carrier auto-selected");
     }
 
     public void ShowCombatPanel()
     {
         HideAllPanels();
-        
+
         // Activate parent container first
         if (battleShipPanels) battleShipPanels.SetActive(true);
-        
+
         if (combatPanel) combatPanel.SetActive(true);
-        
+
         // CRITICAL: Keep BoardPanel active and now show BOTH boards
-        if (boardPanel) 
+        if (boardPanel)
         {
             boardPanel.SetActive(true);
             Debug.Log("?? BoardPanel active for combat");
         }
-        
+
         // Ensure player board stays active
         if (playerBoardParent != null)
         {
             playerBoardParent.gameObject.SetActive(true);
             Debug.Log("?? Player board active for combat");
         }
-        
+
+        // CRITICAL FIX: Clear any lingering preview tiles from ship placement
+        ClearShipPreview();
+
+        // CRITICAL FIX: Refresh player board visuals to remove green selection tiles
+        RefreshPlayerBoardForCombat();
+
         // NOW activate enemy board for combat phase
         if (enemyBoardParent != null)
         {
             enemyBoardParent.gameObject.SetActive(true);
             Debug.Log("?? Enemy board NOW activated for combat phase");
         }
-        
+
         // Set ship status title
         if (shipStatusTitleText != null)
         {
             shipStatusTitleText.text = "<b>Your Fleet Status</b>";
             shipStatusTitleText.richText = true; // Enable bold
         }
-        
+
         // CRITICAL FIX: Show target player panel (contains enemy dropdown)
         if (targetPlayerPanel != null)
         {
@@ -345,7 +351,7 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             Debug.LogWarning("?? Target player panel is null - dropdown will not be visible!");
         }
-        
+
         // Ensure leave game button is visible and interactable
         if (leaveGameButton != null)
         {
@@ -353,50 +359,119 @@ public class BattleshipsUIManager : MonoBehaviour
             leaveGameButton.interactable = true;
             Debug.Log("?? Leave game button activated");
         }
-        
+
         // NEW: Populate enemy player dropdown
         PopulateEnemyPlayerDropdown();
-        
+
         // CRITICAL: Log the initial selected target for debugging
         Debug.Log($"?? Combat panel shown - Initial target: Player {selectedTargetPlayerId}");
-        
+
         UpdateCombatUI();
     }
 
     public void ShowGameOverPanel(int winnerId)
     {
         HideAllPanels();
-        
+
         // Activate parent container first
         if (battleShipPanels) battleShipPanels.SetActive(true);
-        
+
         if (gameOverPanel) gameOverPanel.SetActive(true);
-        
+
+        // Get local player ID to determine if we won or were eliminated
+        int myPlayerId = GetLocalPlayerId();
+
         if (winnerText)
         {
-            if (winnerId == localPlayerId)
+            if (winnerId == myPlayerId)
             {
-                winnerText.text = "Victory! You Win!";
+                // Local player won
+                winnerText.text = "<color=green><b>Victory!</b></color>\nYou Win!";
+            }
+            else if (BattleshipsGameManager.Instance != null &&
+                     BattleshipsGameManager.Instance.IsPlayerEliminated(myPlayerId))
+            {
+                // Local player was eliminated (but game just ended for everyone)
+                winnerText.text = $"<color=yellow>Game Over</color>\nPlayer {winnerId + 1} Wins!";
             }
             else
             {
-                winnerText.text = $"Player {winnerId} Wins!";
+                // Local player is spectating or game ended otherwise
+                winnerText.text = $"<color=yellow>Game Over</color>\nPlayer {winnerId + 1} Wins!";
             }
         }
+
+        // CRITICAL FIX: Use returnToLobbyButton (on gameOverPanel) not leaveGameButton (on combatPanel)
+        if (returnToLobbyButton != null)
+        {
+            returnToLobbyButton.gameObject.SetActive(true);
+            returnToLobbyButton.interactable = true;
+            Debug.Log("? Return to lobby button visible on game over panel");
+        }
+        else
+        {
+            Debug.LogWarning("?? Return to lobby button is null - player cannot leave!");
+        }
+
+        // Hide Play Again button (not implemented yet)
+        if (playAgainButton != null)
+        {
+            playAgainButton.gameObject.SetActive(false);
+        }
+
+        Debug.Log($"? Game over panel shown - Winner: Player {winnerId}, Local Player: {myPlayerId}");
+    }
+
+    /// <summary>
+    /// Show defeat panel for eliminated player (game continues for others)
+    /// </summary>
+    private void ShowDefeatPanel()
+    {
+        HideAllPanels();
+
+        // Activate parent container first
+        if (battleShipPanels) battleShipPanels.SetActive(true);
+
+        if (gameOverPanel) gameOverPanel.SetActive(true);
+
+        if (winnerText)
+        {
+            winnerText.text = "<color=red><b>Defeated!</b></color>\nYou've been eliminated!";
+        }
+
+        // CRITICAL FIX: Use returnToLobbyButton (on gameOverPanel) not leaveGameButton (on combatPanel)
+        if (returnToLobbyButton != null)
+        {
+            returnToLobbyButton.gameObject.SetActive(true);
+            returnToLobbyButton.interactable = true;
+            Debug.Log("? Return to lobby button visible on defeat panel");
+        }
+        else
+        {
+            Debug.LogWarning("?? Return to lobby button is null - player cannot leave!");
+        }
+
+        // Hide other buttons
+        if (playAgainButton != null)
+        {
+            playAgainButton.gameObject.SetActive(false);
+        }
+
+        Debug.Log("? Defeat panel shown for eliminated player");
     }
 
     public void ShowWaitingPanel(string message)
     {
         HideAllPanels();
-        
+
         // Activate parent container first
         if (battleShipPanels) battleShipPanels.SetActive(true);
-        
+
         // Waiting panel is optional - only show if assigned
         if (waitingPanel != null)
         {
             waitingPanel.SetActive(true);
-            
+
             TextMeshProUGUI waitingText = waitingPanel.GetComponentInChildren<TextMeshProUGUI>(true);
             if (waitingText != null)
             {
@@ -411,21 +486,21 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             Debug.Log($"Waiting panel not assigned - message: {message}");
         }
-        
+
         // CRITICAL: Hide the board panel when showing waiting screen
         if (boardPanel != null)
         {
             boardPanel.SetActive(false);
             Debug.Log("? Board panel hidden while waiting");
         }
-        
+
         // Also explicitly hide individual board parents
         if (playerBoardParent != null)
         {
             playerBoardParent.gameObject.SetActive(false);
             Debug.Log("? Player board hidden while waiting");
         }
-        
+
         if (enemyBoardParent != null)
         {
             enemyBoardParent.gameObject.SetActive(false);
@@ -456,42 +531,80 @@ public class BattleshipsUIManager : MonoBehaviour
 
         // Get local player ID
         localPlayerId = GetLocalPlayerId();
-        
+
         // Get total player count
         int totalPlayers = BattleshipsGameManager.Instance.GetTotalPlayers();
-        
+
         // Clear existing options
         enemyPlayerDropdown.ClearOptions();
-        
-        // Create list of enemy player options
+
+        // Create list of enemy player options (only alive players)
         List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>();
-        
+
         for (int i = 0; i < totalPlayers; i++)
         {
-            // Skip the local player
+            // Skip the local player and eliminated players
             if (i == localPlayerId) continue;
-            
+            if (BattleshipsGameManager.Instance.IsPlayerEliminated(i)) continue;
+
             // Add enemy player to dropdown
             string playerLabel = $"Enemy Player {i + 1}";
             options.Add(new TMP_Dropdown.OptionData(playerLabel));
         }
-        
+
         // Add options to dropdown
         enemyPlayerDropdown.AddOptions(options);
-        
+
         // Select the first enemy by default (index 0 in the filtered list)
         if (options.Count > 0)
         {
             enemyPlayerDropdown.value = 0;
-            
+
             // Calculate actual enemy player ID (first enemy after local player)
             selectedTargetPlayerId = GetEnemyPlayerIdFromDropdownIndex(0);
-            
+
             Debug.Log($"? Populated enemy dropdown with {options.Count} enemies. Selected: Player {selectedTargetPlayerId}");
         }
         else
         {
             Debug.LogWarning("?? No enemy players found!");
+            selectedTargetPlayerId = -1;
+        }
+    }
+
+    /// <summary>
+    /// Called when a player is eliminated - update dropdown and switch targets if necessary
+    /// </summary>
+    public void OnPlayerEliminated(int eliminatedPlayerId)
+    {
+        Debug.Log($"?? OnPlayerEliminated called for Player {eliminatedPlayerId}");
+
+        int myPlayerId = GetLocalPlayerId();
+
+        // CRITICAL: If I'm the eliminated player, show defeat panel immediately
+        if (eliminatedPlayerId == myPlayerId)
+        {
+            Debug.Log("? I was eliminated - showing defeat panel");
+            ShowDefeatPanel();
+            return; // Don't update dropdown for eliminated player
+        }
+
+        // Check if we were targeting the eliminated player
+        bool wasTargetingEliminated = (selectedTargetPlayerId == eliminatedPlayerId);
+
+        // Repopulate dropdown to remove the eliminated player
+        PopulateEnemyPlayerDropdown();
+
+        // If we were targeting the eliminated player, we've automatically switched to the first available target
+        if (wasTargetingEliminated)
+        {
+            Debug.Log($"? Was targeting eliminated player {eliminatedPlayerId} - switched to Player {selectedTargetPlayerId}");
+
+            // Regenerate the enemy board for the new target
+            if (selectedTargetPlayerId >= 0)
+            {
+                SwitchEnemyBoard(selectedTargetPlayerId);
+            }
         }
     }
 
@@ -502,15 +615,15 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         // Get the actual enemy player ID from the dropdown index
         int newTargetPlayerId = GetEnemyPlayerIdFromDropdownIndex(dropdownIndex);
-        
+
         Debug.Log($"?? Enemy target changed from Player {selectedTargetPlayerId} to Player {newTargetPlayerId} (dropdown index: {dropdownIndex})");
-        
+
         // Update selected target BEFORE switching board
         selectedTargetPlayerId = newTargetPlayerId;
-        
+
         // Switch to the selected enemy's board
         SwitchEnemyBoard(selectedTargetPlayerId);
-        
+
         // Update UI to reflect new target
         UpdateCombatUI();
     }
@@ -522,26 +635,37 @@ public class BattleshipsUIManager : MonoBehaviour
     private int GetEnemyPlayerIdFromDropdownIndex(int dropdownIndex)
     {
         if (BattleshipsGameManager.Instance == null) return 0;
-        
+
         int totalPlayers = BattleshipsGameManager.Instance.GetTotalPlayers();
         int enemyCount = 0;
-        
+
         for (int i = 0; i < totalPlayers; i++)
         {
             // Skip local player
             if (i == localPlayerId) continue;
-            
-            // This is an enemy - check if it matches our dropdown index
+
+            // Skip eliminated players
+            if (BattleshipsGameManager.Instance.IsPlayerEliminated(i)) continue;
+
+            // This is an alive enemy - check if it matches our dropdown index
             if (enemyCount == dropdownIndex)
             {
                 return i;
             }
-            
+
             enemyCount++;
         }
-        
-        // Fallback to first non-local player
-        return (localPlayerId == 0) ? 1 : 0;
+
+        // Fallback: find first non-local, non-eliminated player
+        for (int i = 0; i < totalPlayers; i++)
+        {
+            if (i != localPlayerId && !BattleshipsGameManager.Instance.IsPlayerEliminated(i))
+            {
+                return i;
+            }
+        }
+
+        return -1; // No valid targets
     }
 
     /// <summary>
@@ -560,13 +684,13 @@ public class BattleshipsUIManager : MonoBehaviour
 
         // Regenerate enemy board for the selected target player
         Dictionary<Vector2Int, GameObject> newEnemyTiles = boardGenerator.RegenerateEnemyBoard(targetPlayerId);
-        
+
         if (newEnemyTiles != null && newEnemyTiles.Count > 0)
         {
             // Update local reference
             enemyBoardTiles = newEnemyTiles;
             Debug.Log($"? Enemy board switched successfully ({newEnemyTiles.Count} tiles) - Now viewing Player {targetPlayerId}");
-            
+
             // CRITICAL FIX: Request board state from server before refreshing visuals
             if (BattleshipsGameManager.Instance != null)
             {
@@ -574,7 +698,7 @@ public class BattleshipsUIManager : MonoBehaviour
                 Debug.Log($"?? Requesting board state for Player {targetPlayerId} from server...");
                 BattleshipsGameManager.Instance.RequestBoardStateServerRpc(myPlayerId, targetPlayerId);
             }
-            
+
             // Note: Visual refresh will happen in OnBoardStateReceived callback
         }
         else
@@ -582,7 +706,7 @@ public class BattleshipsUIManager : MonoBehaviour
             Debug.LogError($"?? Failed to regenerate enemy board for Player {targetPlayerId}");
         }
     }
-    
+
     /// <summary>
     /// Update enemy board tiles dictionary (called by BattleshipsBoardGenerator after regeneration)
     /// </summary>
@@ -593,18 +717,18 @@ public class BattleshipsUIManager : MonoBehaviour
             Debug.LogWarning("?? Attempted to update enemy board tiles with null dictionary");
             return;
         }
-        
+
         enemyBoardTiles = newEnemyTiles;
         Debug.Log($"? Updated enemy board tiles dictionary ({newEnemyTiles.Count} tiles)");
     }
-    
+
     /// <summary>
     /// Called when board state is received from server (after requesting it)
     /// </summary>
     public void OnBoardStateReceived(int targetPlayerId)
     {
         Debug.Log($"?? Board state received for Player {targetPlayerId}");
-        
+
         // Only refresh if this is the currently selected target
         if (targetPlayerId == selectedTargetPlayerId)
         {
@@ -633,7 +757,7 @@ public class BattleshipsUIManager : MonoBehaviour
         if (targetBoard == null)
         {
             Debug.LogWarning($"?? Cannot get board for player {targetPlayerId} - board data not available");
-            
+
             // FALLBACK: Reset all tiles to default blue (water)
             Debug.Log($"?? Resetting all enemy board tiles to default (waiting for server data)");
             foreach (var kvp in enemyBoardTiles)
@@ -653,7 +777,7 @@ public class BattleshipsUIManager : MonoBehaviour
 
         Debug.Log($"?? Refreshing enemy board visuals for Player {targetPlayerId} ({enemyBoardTiles.Count} tiles)");
         Debug.Log($"   Target board has {targetBoard.hits.Count} hits and {targetBoard.misses.Count} misses");
-        
+
         int hitsFound = 0;
         int missesFound = 0;
         int untouchedTiles = 0;
@@ -663,15 +787,15 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             Vector2Int pos = kvp.Key;
             GameObject tile = kvp.Value;
-            
+
             if (tile == null)
             {
                 Debug.LogWarning($"?? Tile at {pos} is null!");
                 continue;
             }
-            
+
             Image tileImage = tile.GetComponent<Image>();
-            if (tileImage == null) 
+            if (tileImage == null)
             {
                 Debug.LogWarning($"?? Tile at {pos} has no Image component!");
                 continue;
@@ -697,7 +821,7 @@ public class BattleshipsUIManager : MonoBehaviour
                 untouchedTiles++;
             }
         }
-        
+
         Debug.Log($"? Refreshed enemy board: {hitsFound} hits, {missesFound} misses, {untouchedTiles} untouched tiles");
     }
 
@@ -712,13 +836,12 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         if (instructionsText != null)
         {
-            instructionsText.text = 
+            instructionsText.text =
                 "<b>Ship Placement Controls:</b>\n" +
                 "• <b>Click</b> ship buttons to select (or press 1-5)\n" +
                 "• <b>Double-click</b> a tile to place ship\n" +
-                "• <b>Press R</b> to rotate ship orientation\n" +
-                "• <b>Press Enter</b> when all ships placed\n" +
-                "• Ships rotate automatically if they don't fit";
+                "• <b>Press R</b> to rotate ship orientation\n";
+                
         }
     }
 
@@ -733,7 +856,7 @@ public class BattleshipsUIManager : MonoBehaviour
 
         selectedShipType = shipType;
         UpdateSelectedShipDisplay();
-        
+
         Debug.Log($"Selected ship: {shipType}");
     }
 
@@ -741,16 +864,16 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         // Simple toggle between horizontal and vertical
         isHorizontalPlacement = !isHorizontalPlacement;
-        
+
         UpdateSelectedShipDisplay();
-        
+
         // Force preview update immediately with current hovered position
         if (hoveredTilePosition.x >= 0 && hoveredTilePosition.y >= 0)
         {
             // Force update even if position is the same (forceUpdate = true)
             ShowShipPreview(hoveredTilePosition, forceUpdate: true);
         }
-        
+
         string orientation = isHorizontalPlacement ? "Horizontal ?" : "Vertical ?";
         Debug.Log($"Ship rotation: {orientation}");
         ShowMessage($"Ship rotated to {orientation}");
@@ -775,7 +898,7 @@ public class BattleshipsUIManager : MonoBehaviour
             {
                 if (placed) placedCount++;
             }
-            
+
             // Enhanced status with remaining ships
             if (placedCount == 5)
             {
@@ -800,18 +923,18 @@ public class BattleshipsUIManager : MonoBehaviour
         if (button == null) return;
 
         TextMeshProUGUI buttonText = button.GetComponentInChildren<TextMeshProUGUI>();
-        
+
         if (shipsPlaced[shipType])
         {
             button.interactable = false;
-            
+
             // Show checkmark when placed
             if (buttonText != null)
             {
                 int length = GetShipLength(shipType);
                 buttonText.text = $"<color=green>?</color> {shipType} ({length})";
             }
-            
+
             var colors = button.colors;
             colors.disabledColor = new Color(0.3f, 0.8f, 0.3f, 0.7f); // Light green
             button.colors = colors;
@@ -854,13 +977,13 @@ public class BattleshipsUIManager : MonoBehaviour
     public void OnTilePlacementClick(Vector2Int position)
     {
         Debug.Log($"? OnTilePlacementClick called at position {position}");
-        
+
         if (BattleshipsGameManager.Instance == null)
         {
             Debug.LogError("? BattleshipsGameManager.Instance is NULL!");
             return;
         }
-        
+
         if (BattleshipsGameManager.Instance.GetGameState() != BattleshipsGameManager.GameState.PlacingShips)
         {
             Debug.LogWarning($"? Cannot place ship - game state is {BattleshipsGameManager.Instance.GetGameState()}, expected PlacingShips");
@@ -869,7 +992,7 @@ public class BattleshipsUIManager : MonoBehaviour
 
         // Get fresh local player ID (important for network synchronization)
         localPlayerId = GetLocalPlayerId();
-        
+
         Debug.Log($"?? Attempting to place {selectedShipType} at {position}, horizontal: {isHorizontalPlacement}");
         Debug.Log($"?? Local player ID: {localPlayerId}");
 
@@ -880,13 +1003,13 @@ public class BattleshipsUIManager : MonoBehaviour
             position,
             isHorizontalPlacement
         );
-        
+
         // Clear preview after placement attempt
         ClearShipPreview();
-        
+
         Debug.Log($"?? Sent PlaceShipServerRpc to server");
     }
-    
+
     /// <summary>
     /// Called by game manager when ship placement succeeds
     /// </summary>
@@ -903,16 +1026,16 @@ public class BattleshipsUIManager : MonoBehaviour
         // Track the placement locally
         localShipPlacements[shipType] = (startPos, isHorizontal);
         shipsPlaced[shipType] = true;
-        
+
         UpdateShipPlacementUI();
-        
+
         // Visual feedback
         VisualizeShipOnBoard(startPos, GetShipLength(shipType), isHorizontal);
         ShowMessage($"<color=green>? {shipType} placed successfully!</color>");
-        
+
         // Update ship status display with local data
         UpdateLocalShipStatus(shipType);
-        
+
         // Auto-select next unplaced ship for convenience
         SelectNextUnplacedShip();
     }
@@ -992,7 +1115,7 @@ public class BattleshipsUIManager : MonoBehaviour
         UpdateLocalShipStatus(BattleshipsGameManager.ShipType.Submarine);
         UpdateLocalShipStatus(BattleshipsGameManager.ShipType.Destroyer);
     }
-    
+
     /// <summary>
     /// Update status for a specific ship using local tracking (client-friendly)
     /// </summary>
@@ -1007,7 +1130,7 @@ public class BattleshipsUIManager : MonoBehaviour
             BattleshipsGameManager.ShipType.Destroyer => destroyerStatusText,
             _ => null
         };
-        
+
         if (statusText == null) return;
 
         // Check local placement tracking first
@@ -1020,7 +1143,7 @@ public class BattleshipsUIManager : MonoBehaviour
         }
 
         // Ship is placed - try to get hit data from server if available (for combat phase)
-        if (BattleshipsGameManager.Instance != null && 
+        if (BattleshipsGameManager.Instance != null &&
             BattleshipsGameManager.Instance.GetGameState() == BattleshipsGameManager.GameState.InProgress)
         {
             var playerBoard = BattleshipsGameManager.Instance.GetPlayerBoard(localPlayerId);
@@ -1063,7 +1186,7 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         if (BattleshipsGameManager.Instance == null) return;
         if (BattleshipsGameManager.Instance.GetGameState() != BattleshipsGameManager.GameState.InProgress) return;
-        
+
         int currentTurn = BattleshipsGameManager.Instance.GetCurrentTurn();
         if (currentTurn != localPlayerId)
         {
@@ -1085,11 +1208,11 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         // CRITICAL FIX: Only visualize if this attack is relevant to what we're currently viewing
         int myPlayerId = GetLocalPlayerId();
-        
+
         // Determine if we should visualize this attack
         bool shouldVisualize = false;
         bool isPlayerBoard = false;
-        
+
         if (targetId == myPlayerId)
         {
             // Attack on MY board - always visualize on player board
@@ -1097,7 +1220,7 @@ public class BattleshipsUIManager : MonoBehaviour
             isPlayerBoard = true;
             Debug.Log($"?? Attack on MY board (Player {myPlayerId}) at {position} - Result: {result}");
         }
-        else if (targetId == selectedTargetPlayerId && BattleshipsGameManager.Instance != null && 
+        else if (targetId == selectedTargetPlayerId && BattleshipsGameManager.Instance != null &&
                  BattleshipsGameManager.Instance.GetGameState() == BattleshipsGameManager.GameState.InProgress)
         {
             // Attack on the enemy I'm currently viewing - visualize on enemy board
@@ -1110,7 +1233,7 @@ public class BattleshipsUIManager : MonoBehaviour
             // Attack on a different player that I'm not viewing - don't visualize
             Debug.Log($"?? Attack on Player {targetId} (not currently viewing) - skipping visualization");
         }
-        
+
         // Only visualize if this attack is relevant to current view
         if (shouldVisualize)
         {
@@ -1148,7 +1271,7 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         for (int i = 0; i < length; i++)
         {
-            Vector2Int pos = isHorizontal 
+            Vector2Int pos = isHorizontal
                 ? new Vector2Int(startPos.x + i, startPos.y)
                 : new Vector2Int(startPos.x, startPos.y + i);
 
@@ -1156,12 +1279,38 @@ public class BattleshipsUIManager : MonoBehaviour
             {
                 // Change tile color to grey for ship placement
                 Image tileImage = tile.GetComponent<Image>();
-                if (tileImage) 
+                if (tileImage)
                 {
                     tileImage.color = new Color(0.5f, 0.5f, 0.5f, 1.0f); // Grey for ships
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Refresh player board visuals for combat phase (show placed ships, clear previews)
+    /// </summary>
+    private void RefreshPlayerBoardForCombat()
+    {
+        Debug.Log("?? Refreshing player board for combat phase...");
+
+        // First, reset all tiles to water color (clears any lingering preview tiles)
+        SetTilesToWaterColor(playerBoardTiles);
+
+        // Then, visualize all placed ships on the player board
+        foreach (var shipPlacement in localShipPlacements)
+        {
+            BattleshipsGameManager.ShipType shipType = shipPlacement.Key;
+            Vector2Int startPos = shipPlacement.Value.Item1;
+            bool isHorizontal = shipPlacement.Value.Item2;
+            int length = GetShipLength(shipType);
+
+            // Visualize the ship (grey tiles)
+            VisualizeShipOnBoard(startPos, length, isHorizontal);
+            Debug.Log($"  ? Re-visualized {shipType} at {startPos} (horizontal: {isHorizontal})");
+        }
+
+        Debug.Log($"? Player board refreshed - {localShipPlacements.Count} ships visualized");
     }
 
     /// <summary>
@@ -1171,9 +1320,9 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         // Select the correct board based on the flag
         Dictionary<Vector2Int, GameObject> targetBoard = isPlayerBoard ? playerBoardTiles : enemyBoardTiles;
-        
+
         string boardName = isPlayerBoard ? "PLAYER" : "ENEMY";
-        
+
         if (targetBoard.TryGetValue(position, out GameObject tile))
         {
             Image tileImage = tile.GetComponent<Image>();
@@ -1211,14 +1360,14 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         playerBoardTiles = playerTiles;
         enemyBoardTiles = enemyTiles;
-        
+
         // Set all tiles to blue water color initially
         SetTilesToWaterColor(playerBoardTiles);
         SetTilesToWaterColor(enemyBoardTiles);
-        
+
         Debug.Log($"Board tiles initialized: {playerBoardTiles.Count} player tiles, {enemyBoardTiles.Count} enemy tiles (all set to blue water)");
     }
-    
+
     /// <summary>
     /// Set all tiles in a board to blue water color
     /// </summary>
@@ -1248,23 +1397,23 @@ public class BattleshipsUIManager : MonoBehaviour
     private async void OnLeaveGameClicked()
     {
         Debug.Log("Leave game button clicked");
-        
+
         // Disable button to prevent multiple clicks
         if (leaveGameButton != null) leaveGameButton.interactable = false;
-        
+
         try
         {
             // Hide all game panels immediately
             HideAllPanels();
             Debug.Log("? All game panels hidden");
-            
+
             // Leave the lobby/disconnect from game
             if (LobbyManager.Instance != null)
             {
                 await LobbyManager.Instance.LeaveLobby();
                 Debug.Log("? Left game successfully");
             }
-            
+
             // Return to main menu
             if (UIManager.Instance != null)
             {
@@ -1275,7 +1424,7 @@ public class BattleshipsUIManager : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"? Error leaving game: {e.Message}");
-            
+
             // Force hide panels and return to menu anyway
             HideAllPanels();
             if (UIManager.Instance != null)
@@ -1309,7 +1458,7 @@ public class BattleshipsUIManager : MonoBehaviour
     {
         // Reset game and start new match
         Debug.Log("Starting new game...");
-        
+
         // Reset local state
         ResetGameState();
     }
@@ -1344,37 +1493,37 @@ public class BattleshipsUIManager : MonoBehaviour
     private void ResetShipPlacementState()
     {
         Debug.Log("?? Resetting ship placement state...");
-        
+
         // Reset all ships to unplaced
         shipsPlaced[BattleshipsGameManager.ShipType.Carrier] = false;
         shipsPlaced[BattleshipsGameManager.ShipType.Battleship] = false;
         shipsPlaced[BattleshipsGameManager.ShipType.Cruiser] = false;
         shipsPlaced[BattleshipsGameManager.ShipType.Submarine] = false;
         shipsPlaced[BattleshipsGameManager.ShipType.Destroyer] = false;
-        
+
         // Clear local placements tracking
         localShipPlacements.Clear();
-        
+
         // Reset orientation
         isHorizontalPlacement = true;
-        
+
         // Clear preview
         ClearShipPreview();
         hoveredTilePosition = new Vector2Int(-1, -1);
-        
+
         // Re-enable all ship buttons
         if (carrierButton) carrierButton.interactable = true;
         if (battleshipButton) battleshipButton.interactable = true;
         if (cruiserButton) cruiserButton.interactable = true;
         if (submarineButton) submarineButton.interactable = true;
         if (destroyerButton) destroyerButton.interactable = true;
-        
+
         // Clear ship visualizations from player board
         ClearShipVisualizations();
-        
+
         Debug.Log("? Ship placement state reset complete");
     }
-    
+
     /// <summary>
     /// Clear all ship visualizations from the player board
     /// </summary>
@@ -1390,7 +1539,7 @@ public class BattleshipsUIManager : MonoBehaviour
                 tileImage.color = new Color(0.0f, 0.4f, 0.7f, 1.0f); // Blue water
             }
         }
-        
+
         Debug.Log("?? Cleared ship visualizations from player board");
     }
 
@@ -1405,25 +1554,25 @@ public class BattleshipsUIManager : MonoBehaviour
     public void CleanupForMainMenu()
     {
         Debug.Log("?? BattleshipsUIManager: Cleaning up for main menu...");
-        
+
         // Hide all UI panels
         HideAllPanels();
         Debug.Log("? All Battleships UI panels hidden");
-        
+
         // CRITICAL: Deactivate parent container that holds all Battleships panels
         if (battleShipPanels != null)
         {
             battleShipPanels.SetActive(false);
             Debug.Log("? Deactivated battleShipPanels parent container");
         }
-        
+
         // CRITICAL: Deactivate BoardPanel (which contains both board parents)
         if (boardPanel != null)
         {
             boardPanel.SetActive(false);
             Debug.Log("? Deactivated BoardPanel (parent container)");
         }
-        
+
         // CRITICAL FIX: Directly deactivate board parents using serialized references
         if (playerBoardParent != null)
         {
@@ -1434,7 +1583,7 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             Debug.LogWarning("?? Player board parent reference is null");
         }
-        
+
         if (enemyBoardParent != null)
         {
             enemyBoardParent.gameObject.SetActive(false);
@@ -1444,7 +1593,7 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             Debug.LogWarning("?? Enemy board parent reference is null");
         }
-        
+
         Debug.Log("? BattleshipsUIManager cleanup complete");
     }
 
@@ -1517,32 +1666,32 @@ public class BattleshipsUIManager : MonoBehaviour
     public void ShowShipPreview(Vector2Int startPosition, bool forceUpdate = false)
     {
         // Don't show preview during combat or if no ship selected
-        if (BattleshipsGameManager.Instance == null || 
+        if (BattleshipsGameManager.Instance == null ||
             BattleshipsGameManager.Instance.GetGameState() != BattleshipsGameManager.GameState.PlacingShips)
         {
             return;
         }
-        
+
         // If same position and not forcing update, don't regenerate
         if (startPosition == hoveredTilePosition && !forceUpdate)
         {
             return;
         }
-        
+
         hoveredTilePosition = startPosition;
-        
+
         // Clear previous preview
         ClearShipPreview();
-        
+
         // Calculate ship positions based on orientation (simplified)
         List<Vector2Int> shipPositions = CalculateShipPositions(startPosition, GetShipLength(selectedShipType), isHorizontalPlacement);
-        
+
         // Check if placement is valid
         bool isValidPlacement = IsValidPlacement(shipPositions);
-        Color previewColor = isValidPlacement 
+        Color previewColor = isValidPlacement
             ? new Color(0.0f, 1.0f, 0.0f, 0.5f)  // Green semi-transparent for valid
             : new Color(1.0f, 0.0f, 0.0f, 0.5f); // Red semi-transparent for invalid
-        
+
         // Create preview tiles
         foreach (var pos in shipPositions)
         {
@@ -1555,24 +1704,24 @@ public class BattleshipsUIManager : MonoBehaviour
                     // Create visual feedback
                     GameObject preview = new GameObject("Preview");
                     preview.transform.SetParent(tile.transform);
-                    
+
                     RectTransform previewRect = preview.AddComponent<RectTransform>();
                     previewRect.anchorMin = Vector2.zero;
                     previewRect.anchorMax = Vector2.one;
                     previewRect.sizeDelta = Vector2.zero;
                     previewRect.localPosition = Vector3.zero;
                     previewRect.localScale = Vector3.one;
-                    
+
                     Image previewImage = preview.AddComponent<Image>();
                     previewImage.color = previewColor;
                     previewImage.raycastTarget = false; // Don't block clicks
-                    
+
                     previewTiles.Add(preview);
                 }
             }
         }
     }
-    
+
     /// <summary>
     /// Clear ship placement preview
     /// </summary>
@@ -1588,36 +1737,36 @@ public class BattleshipsUIManager : MonoBehaviour
         previewTiles.Clear();
         // DON'T reset hoveredTilePosition here - we need it for rotation updates
     }
-    
+
     /// <summary>
     /// Calculate ship tile positions based on start position and orientation
     /// </summary>
     private List<Vector2Int> CalculateShipPositions(Vector2Int startPos, int length, bool isHorizontal)
     {
         List<Vector2Int> positions = new List<Vector2Int>();
-        
+
         // Simple: Horizontal goes right, Vertical goes down
-        Vector2Int direction = isHorizontal 
+        Vector2Int direction = isHorizontal
             ? new Vector2Int(1, 0)   // Horizontal: Right
             : new Vector2Int(0, 1);  // Vertical: Down
-        
+
         for (int i = 0; i < length; i++)
         {
             positions.Add(startPos + direction * i);
         }
-        
+
         return positions;
     }
-    
+
     /// <summary>
     /// Check if ship placement would be valid
     /// </summary>
     private bool IsValidPlacement(List<Vector2Int> positions)
     {
         if (BattleshipsGameManager.Instance == null) return false;
-        
+
         HashSet<Vector2Int> activeTiles = BattleshipsGameManager.Instance.GetActiveTiles();
-        
+
         foreach (var pos in positions)
         {
             // Check if tile is in active tiles (exists on board)
@@ -1625,7 +1774,7 @@ public class BattleshipsUIManager : MonoBehaviour
             {
                 return false;
             }
-            
+
             // Check if tile already has a ship (if we can access player board)
             var playerBoard = BattleshipsGameManager.Instance.GetPlayerBoard(localPlayerId);
             if (playerBoard != null && playerBoard.HasShip(pos))
@@ -1633,10 +1782,9 @@ public class BattleshipsUIManager : MonoBehaviour
                 return false;
             }
         }
-        
+
         return true;
     }
 
     #endregion
-
 }
