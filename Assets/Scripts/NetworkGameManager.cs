@@ -3,6 +3,13 @@ using Unity.Netcode;
 using System.Collections.Generic;
 using System;
 
+/// <summary>
+/// OBSOLETE: Use HybridGameManager with GameRules.CreateDiceRaceRules() instead.
+/// This manager is deprecated and will be removed in a future update.
+/// All Dice Race games should now route through HybridGameManager + Modules.
+/// See STANDARD_GAME_LIBRARY_IMPLEMENTATION.md for migration guide.
+/// </summary>
+[Obsolete("Use HybridGameManager with GameRules.CreateDiceRaceRules() and CustomGameSpawner instead.")]
 public class NetworkGameManager : NetworkBehaviour
 {
     private static NetworkGameManager instance;

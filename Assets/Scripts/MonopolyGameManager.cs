@@ -3,6 +3,13 @@ using Unity.Netcode;
 using System.Collections.Generic;
 using System;
 
+/// <summary>
+/// OBSOLETE: Use HybridGameManager with GameRules.CreateMonopolyRules() instead.
+/// This manager is deprecated and will be removed in a future update.
+/// All Monopoly games should now route through HybridGameManager + Modules.
+/// See STANDARD_GAME_LIBRARY_IMPLEMENTATION.md for migration guide.
+/// </summary>
+[Obsolete("Use HybridGameManager with GameRules.CreateMonopolyRules() and CustomGameSpawner instead.")]
 public class MonopolyGameManager : NetworkBehaviour
 {
     private static MonopolyGameManager instance;

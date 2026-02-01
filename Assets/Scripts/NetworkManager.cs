@@ -20,7 +20,24 @@ public class NetworkManager : MonoBehaviour
                 if (instance == null)
                 {
                     GameObject go = new GameObject("NetworkManager");
+                    
+                    // Add Unity's NetworkManager component FIRST
+                    var unityNetworkManager = go.AddComponent<Unity.Netcode.NetworkManager>();
+                    
+                    // Add UnityTransport component
+                    var transport = go.AddComponent<UnityTransport>();
+                    
+                    // Configure NetworkManager to use the transport
+                    if (unityNetworkManager.NetworkConfig == null)
+                    {
+                        unityNetworkManager.NetworkConfig = new NetworkConfig();
+                    }
+                    unityNetworkManager.NetworkConfig.NetworkTransport = transport;
+                    
+                    // Add our custom NetworkManager script LAST
                     instance = go.AddComponent<NetworkManager>();
+                    
+                    Debug.Log("Created NetworkManager GameObject with Unity NetworkManager and UnityTransport components");
                 }
             }
             return instance;
@@ -33,6 +50,11 @@ public class NetworkManager : MonoBehaviour
     private Unity.Netcode.NetworkManager netcodeManager;
     public string JoinCode { get; private set; }
     private string playerID;
+    
+    // Track initialization state
+    private bool isInitializing = false;
+    private bool isInitialized = false;
+    private Task initializationTask;
 
     private void Awake()
     {
@@ -84,7 +106,7 @@ public class NetworkManager : MonoBehaviour
             netcodeManager.NetworkConfig.NetworkTransport = transport;
         }
 
-        Debug.Log("Using existing Unity NetworkManager component");
+        Debug.Log("NetworkManager setup complete - Unity NetworkManager and UnityTransport configured");
 
         // Subscribe to network events for better debugging
         netcodeManager.OnClientConnectedCallback += OnClientConnected;
@@ -109,7 +131,32 @@ public class NetworkManager : MonoBehaviour
 
     private async void Start()
     {
-        await InitializeUnityServices();
+        await EnsureInitialized();
+    }
+
+    /// <summary>
+    /// Ensure Unity Services are initialized. Can be called multiple times safely.
+    /// </summary>
+    public async Task EnsureInitialized()
+    {
+        // If already initialized, return immediately
+        if (isInitialized)
+        {
+            return;
+        }
+
+        // If currently initializing, wait for that to complete
+        if (isInitializing && initializationTask != null)
+        {
+            await initializationTask;
+            return;
+        }
+
+        // Start initialization
+        isInitializing = true;
+        initializationTask = InitializeUnityServices();
+        await initializationTask;
+        isInitializing = false;
     }
 
     /// <summary>
@@ -117,6 +164,12 @@ public class NetworkManager : MonoBehaviour
     /// </summary>
     private async Task InitializeUnityServices()
     {
+        if (isInitialized)
+        {
+            Debug.Log("Unity Services already initialized");
+            return;
+        }
+
         try
         {
             Debug.Log("Initializing Unity Services...");
@@ -129,11 +182,13 @@ public class NetworkManager : MonoBehaviour
             }
 
             playerID = AuthenticationService.Instance.PlayerId;
-            Debug.Log($"Player authenticated with ID: {playerID}");
+            isInitialized = true;
+            Debug.Log($"? Player authenticated with ID: {playerID}");
         }
         catch (System.Exception e)
         {
             Debug.LogError($"Failed to initialize Unity Services: {e.Message}");
+            isInitialized = false;
         }
     }
 
@@ -145,6 +200,16 @@ public class NetworkManager : MonoBehaviour
     {
         try
         {
+            // CRITICAL: Ensure Unity Services are initialized first
+            Debug.Log("Ensuring Unity Services are initialized before creating relay...");
+            await EnsureInitialized();
+
+            if (!isInitialized)
+            {
+                Debug.LogError("Cannot create relay - Unity Services initialization failed");
+                return null;
+            }
+
             // Ensure we're not already hosting
             if (netcodeManager.IsListening)
             {
@@ -182,7 +247,7 @@ public class NetworkManager : MonoBehaviour
             bool started = netcodeManager.StartHost();
             if (started)
             {
-                Debug.Log($"Host started successfully with join code: {JoinCode}");
+                Debug.Log($"? Host started successfully with join code: {JoinCode}");
                 Debug.Log($"Network Manager status - IsHost: {netcodeManager.IsHost}, IsServer: {netcodeManager.IsServer}, IsListening: {netcodeManager.IsListening}");
                 return JoinCode;
             }
@@ -214,6 +279,16 @@ public class NetworkManager : MonoBehaviour
     {
         try
         {
+            // CRITICAL: Ensure Unity Services are initialized first
+            Debug.Log("Ensuring Unity Services are initialized before joining relay...");
+            await EnsureInitialized();
+
+            if (!isInitialized)
+            {
+                Debug.LogError("Cannot join relay - Unity Services initialization failed");
+                return false;
+            }
+
             Debug.Log($"Joining relay with code: {joinCode}");
             
             if (string.IsNullOrEmpty(joinCode))
@@ -275,7 +350,7 @@ public class NetworkManager : MonoBehaviour
                 
                 if (netcodeManager.IsConnectedClient)
                 {
-                    Debug.Log("Successfully connected to host!");
+                    Debug.Log("? Successfully connected to host!");
                     return true;
                 }
                 else
