@@ -441,9 +441,9 @@ RectTransform:
   - {fileID: 2111287272}
   m_Father: {fileID: 1998878795}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 93.5, y: -251}
   m_SizeDelta: {x: 187, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &46015240
@@ -872,7 +872,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -250}
+  m_AnchoredPosition: {x: 0, y: -250.00098}
   m_SizeDelta: {x: 187, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &69582697
@@ -14488,9 +14488,9 @@ RectTransform:
   - {fileID: 93076075}
   m_Father: {fileID: 1998878795}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 93.5, y: -35}
   m_SizeDelta: {x: 187, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &927744469
@@ -14689,9 +14689,9 @@ RectTransform:
   - {fileID: 542600238}
   m_Father: {fileID: 1998878795}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 93.5, y: -683}
   m_SizeDelta: {x: 187, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &943252944
@@ -22123,7 +22123,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1599678497
 RectTransform:
   m_ObjectHideFlags: 0
@@ -22591,9 +22591,9 @@ RectTransform:
   - {fileID: 1306478631}
   m_Father: {fileID: 1998878795}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 93.5, y: -899}
   m_SizeDelta: {x: 187, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1630606948
@@ -24062,9 +24062,9 @@ RectTransform:
   - {fileID: 252777624}
   m_Father: {fileID: 1998878795}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 93.5, y: -467}
   m_SizeDelta: {x: 187, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1727697171
@@ -24260,7 +24260,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -340}
+  m_AnchoredPosition: {x: 0, y: -340.00098}
   m_SizeDelta: {x: 187, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1755515987
@@ -28728,23 +28728,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
   mainMenuPanel: {fileID: 1640775359}
-  gameModeSelectionPanel: {fileID: 1975689582}
-  gameSetupPanel: {fileID: 569271567}
+  savedGamesPanel: {fileID: 0}
   lobbyPanel: {fileID: 1813386862}
   joinPanel: {fileID: 941264664}
   diceRaceGamePanel: {fileID: 1352846182}
   monopolyGamePanel: {fileID: 1618046483}
-  hostButton: {fileID: 1902979127}
-  joinButton: {fileID: 1984956061}
+  createCustomGameButton: {fileID: 0}
+  hostGameButton: {fileID: 0}
+  joinGameButton: {fileID: 0}
   exitButton: {fileID: 87372027}
-  diceRaceButton: {fileID: 511571265}
-  monopolyButton: {fileID: 221254843}
-  battleshipsButton: {fileID: 1921290276}
-  backFromGameModeButton: {fileID: 514291524}
-  tileCountInput: {fileID: 2082977134}
-  playerCountInput: {fileID: 1037820355}
-  createLobbyButton: {fileID: 1861636286}
-  backFromSetupButton: {fileID: 1073459517}
+  savedGamesListContent: {fileID: 0}
+  savedGameItemPrefab: {fileID: 0}
+  backFromSavedGamesButton: {fileID: 0}
+  noSavedGamesText: {fileID: 0}
   joinCodeInput: {fileID: 1757200315}
   submitJoinButton: {fileID: 737479760}
   backToMenuButton: {fileID: 336684389}
