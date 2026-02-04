@@ -656,25 +656,41 @@ public class UIManager_Streamlined : MonoBehaviour
 
     private void SetupSavedGameListItem(GameObject listItem, SavedGameInfo gameInfo)
     {
-        TextMeshProUGUI gameNameText = listItem.transform.Find("GameNameText")?.GetComponent<TextMeshProUGUI>();
-        TextMeshProUGUI gameDetailsText = listItem.transform.Find("GameDetailsText")?.GetComponent<TextMeshProUGUI>();
-        Button hostButton = listItem.transform.Find("HostButton")?.GetComponent<Button>();
+        // This will find TMP texts anywhere under this prefab even if it is nested
+        TextMeshProUGUI gameNameText = null;
+        TextMeshProUGUI gameDetailsText = null;
 
-        if (gameNameText != null)
+        foreach (var t in listItem.GetComponentsInChildren<TextMeshProUGUI>(true))
         {
-            gameNameText.text = gameInfo.gameName;
+            if (t.gameObject.name == "GameNameText") gameNameText = t;
+            else if (t.gameObject.name == "GameDetailsText") gameDetailsText = t;
         }
 
-        if (gameDetailsText != null)
+        // Find the host button anywhere under this prefab even if it is nested
+        Button hostButton = null;
+        foreach (var b in listItem.GetComponentsInChildren<Button>(true))
         {
-            gameDetailsText.text = gameInfo.GetDescription();
+            if (b.gameObject.name == "HostButton")
+            {
+                hostButton = b;
+                break;
+            }
         }
+
+        if (gameNameText != null) gameNameText.text = gameInfo.gameName;
+        else Debug.LogWarning("[UIManager_Streamlined] GameNameText not found in prefab instance.");
+
+        if (gameDetailsText != null) gameDetailsText.text = gameInfo.GetDescription();
+        else Debug.LogWarning("[UIManager_Streamlined] GameDetailsText not found in prefab instance.");
 
         if (hostButton != null)
         {
+            hostButton.onClick.RemoveAllListeners(); // prevents duplicate listeners if rebuilt
             hostButton.onClick.AddListener(() => OnHostSavedGameClicked(gameInfo));
         }
+        else Debug.LogWarning("[UIManager_Streamlined] HostButton not found in prefab instance.");
     }
+
 
     /// <summary>
     /// Public method to trigger hosting a saved game (called by UI elements or external scripts)

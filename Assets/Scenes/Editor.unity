@@ -10150,7 +10150,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 1
-  m_Spacing: 10
+  m_Spacing: 50
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
@@ -19102,7 +19102,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1087289664}
   m_Direction: 0
   m_Value: 0
-  m_Size: 0.99990445
+  m_Size: 0.9962745
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
