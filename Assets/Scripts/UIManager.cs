@@ -1229,6 +1229,8 @@ public class UIManager : MonoBehaviour
         SetStatusInfo("Select a game mode");
     }
 
+
+
     private void OnDiceRaceButtonClicked()
     {
         Debug.Log("Dice Race button clicked");

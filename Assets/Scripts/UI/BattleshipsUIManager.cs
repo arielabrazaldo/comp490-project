@@ -337,7 +337,7 @@ public class BattleshipsUIManager : MonoBehaviour
         // Set ship status title
         if (shipStatusTitleText != null)
         {
-            shipStatusTitleText.text = "<b>Your Fleet Status</b>";
+            shipStatusTitleText.text = "<b>Fleet Status</b>";
             shipStatusTitleText.richText = true; // Enable bold
         }
 
