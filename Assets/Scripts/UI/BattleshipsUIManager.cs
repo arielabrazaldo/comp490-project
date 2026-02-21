@@ -1088,7 +1088,7 @@ public class BattleshipsUIManager : MonoBehaviour
 
         if (currentTurnText)
         {
-            currentTurnText.text = isMyTurn ? "<color=green><b>Your Turn!</b></color>" : $"Player {currentTurn}'s Turn";
+            currentTurnText.text = isMyTurn ? "<color=green><b>Your Turn!</b></color>" : $"Player {currentTurn + 1}'s Turn";
         }
 
         if (gameStatusText)

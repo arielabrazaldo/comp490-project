@@ -2,10 +2,15 @@ using UnityEngine;
 using Unity.Netcode;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 /// <summary>
-/// Manages the Battleships game state, board layout, and gameplay logic using HashSet for efficiency
+/// OBSOLETE: Use HybridGameManager with GameRules.CreateBattleshipsRules() instead.
+/// This manager is deprecated and will be removed in a future update.
+/// All Battleships games should now route through HybridGameManager + Modules.
+/// See STANDARD_GAME_LIBRARY_IMPLEMENTATION.md for migration guide.
 /// </summary>
+[Obsolete("Use HybridGameManager with GameRules.CreateBattleshipsRules() and CustomGameSpawner instead.")]
 public class BattleshipsGameManager : NetworkBehaviour
 {
     private static BattleshipsGameManager instance;

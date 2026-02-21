@@ -1,0 +1,1402 @@
+{
+  "gameName": "Dice Race",
+  "gameType": "DiceRace",
+  "playerCount": 4,
+  "isStandardGame": true,
+  "createdDate": "2024-01-01T00:00:00.0000000Z",
+  "lastModifiedDate": "2024-01-01T00:00:00.0000000Z",
+  
+  "rules": {
+    "enableCurrency": false,
+    "startingMoney": 0,
+    "passGoBonus": 0,
+    
+    "separatePlayerBoards": false,
+    "tilesPerSide": 20,
+    
+    "canPurchaseProperties": false,
+    "enablePropertyTrading": false,
+    "enableRentCollection": false,
+    "enableBankruptcy": false,
+    
+    "enableCombat": false,
+    "enableShipPlacement": false,
+    
+    "canSeeEnemyTokens": true,
+    "enemyTokenVisibilityRange": 999,
+    
+    "minPlayers": 2,
+    "maxPlayers": 8,
+    
+    "winCondition": "ReachSpecificTile",
+    "lastPlayerStandingWins": true,
+    "moneyThresholdWins": false,
+    "winningMoneyThreshold": 0,
+    "targetTileNumber": 20,
+    
+    "enableCustomDice": false,
+    "numberOfDice": 1,
+    "diceSides": 6,
+    "duplicatesGrantExtraTurn": false,
+    "duplicatesRequired": 2,
+    
+    "enableResources": false,
+    "numberOfResources": 0,
+    "resourceNames": [],
+    "enableResourceCap": false,
+    "maxResourcesPerType": 0,
+    
+    "allowBankruptcy": false,
+    "allowTrading": false
+  },
+  
+  "boardLayout": {
+    "boardName": "Dice Race Track",
+    "boardType": "Linear",
+    "layoutPattern": "Linear",
+    "rows": 1,
+    "columns": 20,
+    "totalTiles": 20,
+    
+    "boardWidth": 1400.0,
+    "boardHeight": 100.0,
+    "tileSpacing": 5.0,
+    
+    "backgroundColor": "#2B4A6F",
+    "borderColor": "#1A2F4A",
+    "showGrid": false,
+    "gridColor": "#CCCCCC",
+    
+    "tiles": [
+      {
+        "tileId": 0,
+        "gridX": 0,
+        "gridY": 0,
+        "positionX": -665.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Start",
+        "tileName": "Start",
+        "tileDescription": "Starting position",
+        
+        "backgroundColor": "#FF0000",
+        "borderColor": "#8B0000",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "1",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Start",
+        "customProperties": {}
+      },
+      {
+        "tileId": 1,
+        "gridX": 1,
+        "gridY": 0,
+        "positionX": -595.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 2",
+        "tileDescription": "",
+        
+        "backgroundColor": "#0000FF",
+        "borderColor": "#00008B",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "2",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 2,
+        "gridX": 2,
+        "gridY": 0,
+        "positionX": -525.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 3",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FFFF00",
+        "borderColor": "#B8860B",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "3",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 3,
+        "gridX": 3,
+        "gridY": 0,
+        "positionX": -455.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 4",
+        "tileDescription": "",
+        
+        "backgroundColor": "#00FF00",
+        "borderColor": "#006400",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "4",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 4,
+        "gridX": 4,
+        "gridY": 0,
+        "positionX": -385.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 5",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FF0000",
+        "borderColor": "#8B0000",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "5",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 5,
+        "gridX": 5,
+        "gridY": 0,
+        "positionX": -315.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 6",
+        "tileDescription": "",
+        
+        "backgroundColor": "#0000FF",
+        "borderColor": "#00008B",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "6",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 6,
+        "gridX": 6,
+        "gridY": 0,
+        "positionX": -245.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 7",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FFFF00",
+        "borderColor": "#B8860B",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "7",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 7,
+        "gridX": 7,
+        "gridY": 0,
+        "positionX": -175.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 8",
+        "tileDescription": "",
+        
+        "backgroundColor": "#00FF00",
+        "borderColor": "#006400",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "8",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 8,
+        "gridX": 8,
+        "gridY": 0,
+        "positionX": -105.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 9",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FF0000",
+        "borderColor": "#8B0000",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "9",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 9,
+        "gridX": 9,
+        "gridY": 0,
+        "positionX": -35.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 10",
+        "tileDescription": "",
+        
+        "backgroundColor": "#0000FF",
+        "borderColor": "#00008B",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "10",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 10,
+        "gridX": 10,
+        "gridY": 0,
+        "positionX": 35.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 11",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FFFF00",
+        "borderColor": "#B8860B",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "11",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 11,
+        "gridX": 11,
+        "gridY": 0,
+        "positionX": 105.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 12",
+        "tileDescription": "",
+        
+        "backgroundColor": "#00FF00",
+        "borderColor": "#006400",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "12",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 12,
+        "gridX": 12,
+        "gridY": 0,
+        "positionX": 175.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 13",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FF0000",
+        "borderColor": "#8B0000",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "13",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 13,
+        "gridX": 13,
+        "gridY": 0,
+        "positionX": 245.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 14",
+        "tileDescription": "",
+        
+        "backgroundColor": "#0000FF",
+        "borderColor": "#00008B",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "14",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 14,
+        "gridX": 14,
+        "gridY": 0,
+        "positionX": 315.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 15",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FFFF00",
+        "borderColor": "#B8860B",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "15",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 15,
+        "gridX": 15,
+        "gridY": 0,
+        "positionX": 385.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 16",
+        "tileDescription": "",
+        
+        "backgroundColor": "#00FF00",
+        "borderColor": "#006400",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "16",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 16,
+        "gridX": 16,
+        "gridY": 0,
+        "positionX": 455.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 17",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FF0000",
+        "borderColor": "#8B0000",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "17",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 17,
+        "gridX": 17,
+        "gridY": 0,
+        "positionX": 525.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 18",
+        "tileDescription": "",
+        
+        "backgroundColor": "#0000FF",
+        "borderColor": "#00008B",
+        "textColor": "#FFFFFF",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "18",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 18,
+        "gridX": 18,
+        "gridY": 0,
+        "positionX": 595.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Normal",
+        "tileName": "Tile 19",
+        "tileDescription": "",
+        
+        "backgroundColor": "#FFFF00",
+        "borderColor": "#B8860B",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 2.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "19",
+        "fontSize": 18.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": false,
+        "glowColor": "#FFFF00",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": false,
+        "animationType": "None",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Default",
+        "customProperties": {}
+      },
+      {
+        "tileId": 19,
+        "gridX": 19,
+        "gridY": 0,
+        "positionX": 665.0,
+        "positionY": -200.0,
+        "width": 65.0,
+        "height": 65.0,
+        
+        "tileType": "Goal",
+        "tileName": "Goal",
+        "tileDescription": "Finish line - First to reach wins!",
+        
+        "backgroundColor": "#00FF00",
+        "borderColor": "#006400",
+        "textColor": "#000000",
+        
+        "shape": "Square",
+        "borderWidth": 3.0,
+        "cornerRadius": 5.0,
+        
+        "displayText": "20",
+        "fontSize": 20.0,
+        "fontStyle": "Bold",
+        "textAlignment": "Center",
+        
+        "iconName": "",
+        "iconSize": 0.0,
+        "iconPosition": "Center",
+        
+        "propertyPrice": 0,
+        "propertyRent": 0,
+        "rentWithBuildings": [0, 0, 0, 0, 0],
+        "buildingCost": 0,
+        "mortgageValue": 0,
+        "propertyGroup": "None",
+        
+        "isInteractive": false,
+        "isClickable": false,
+        "clickAction": "None",
+        
+        "hasGlowEffect": true,
+        "glowColor": "#FFD700",
+        "hasShadow": true,
+        "shadowColor": "#00000080",
+        
+        "isAnimated": true,
+        "animationType": "Pulse",
+        "animationSpeed": 1.0,
+        
+        "canHaveBuildings": false,
+        "buildingIndicatorStyle": "Dots",
+        "buildingColor": "#00FF00",
+        
+        "isActive": true,
+        "category": "Goal",
+        "customProperties": {}
+      }
+    ],
+    
+    "startTileIds": [0],
+    "tileGroups": {
+      "Start": [0],
+      "Goal": [19],
+      "Normal": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+    },
+    
+    "createdDate": "2024-01-01T00:00:00.0000000Z",
+    "lastModifiedDate": "2024-01-01T00:00:00.0000000Z",
+    "version": "1.0"
+  },
+  
+  "uiLayout": {
+    "layoutName": "Dice Race UI",
+    "layoutType": "DiceRace",
+    
+    "canvasWidth": 1920.0,
+    "canvasHeight": 1080.0,
+    "renderMode": "ScreenSpaceOverlay",
+    
+    "uiElements": [
+      {
+        "elementId": "leave_game_button",
+        "elementType": "Button",
+        "elementName": "Leave Game Button",
+        
+        "positionX": -750.0,
+        "positionY": 450.0,
+        "width": 120.0,
+        "height": 40.0,
+        "anchorPreset": "TopLeft",
+        
+        "backgroundColor": "#2B4A6F",
+        "borderColor": "#4A7BA7",
+        "borderWidth": 2.0,
+        "textContent": "Leave Game",
+        "fontSize": 14.0,
+        "fontStyle": "Normal",
+        "textColor": "#87CEEB",
+        
+        "isInteractive": true,
+        "clickAction": "LeaveGame",
+        "isVisible": true,
+        
+        "parentId": "",
+        "childIds": []
+      },
+      {
+        "elementId": "game_status_text",
+        "elementType": "Text",
+        "elementName": "Game Status",
+        
+        "positionX": 200.0,
+        "positionY": 450.0,
+        "width": 300.0,
+        "height": 50.0,
+        "anchorPreset": "Top",
+        
+        "backgroundColor": "#00000000",
+        "borderColor": "#00000000",
+        "borderWidth": 0.0,
+        "textContent": "Game status",
+        "fontSize": 24.0,
+        "fontStyle": "Normal",
+        "textColor": "#87CEEB",
+        
+        "isInteractive": false,
+        "clickAction": "None",
+        "isVisible": true,
+        
+        "parentId": "",
+        "childIds": []
+      },
+      {
+        "elementId": "current_player_text",
+        "elementType": "Text",
+        "elementName": "Current Player",
+        
+        "positionX": 650.0,
+        "positionY": 400.0,
+        "width": 250.0,
+        "height": 40.0,
+        "anchorPreset": "TopRight",
+        
+        "backgroundColor": "#00000000",
+        "borderColor": "#00000000",
+        "borderWidth": 0.0,
+        "textContent": "Current player",
+        "fontSize": 18.0,
+        "fontStyle": "Normal",
+        "textColor": "#FFFFFF",
+        
+        "isInteractive": false,
+        "clickAction": "None",
+        "isVisible": true,
+        
+        "parentId": "",
+        "childIds": []
+      },
+      {
+        "elementId": "result_of_roll_text",
+        "elementType": "Text",
+        "elementName": "Result of Roll",
+        
+        "positionX": -200.0,
+        "positionY": 150.0,
+        "width": 200.0,
+        "height": 50.0,
+        "anchorPreset": "Center",
+        
+        "backgroundColor": "#00000000",
+        "borderColor": "#00000000",
+        "borderWidth": 0.0,
+        "textContent": "Result of roll",
+        "fontSize": 18.0,
+        "fontStyle": "Normal",
+        "textColor": "#FFFFFF",
+        
+        "isInteractive": false,
+        "clickAction": "None",
+        "isVisible": true,
+        
+        "parentId": "",
+        "childIds": []
+      },
+      {
+        "elementId": "roll_dice_button",
+        "elementType": "Button",
+        "elementName": "Roll Dice Button",
+        
+        "positionX": -700.0,
+        "positionY": -350.0,
+        "width": 120.0,
+        "height": 40.0,
+        "anchorPreset": "BottomLeft",
+        
+        "backgroundColor": "#2B4A6F",
+        "borderColor": "#4A7BA7",
+        "borderWidth": 2.0,
+        "textContent": "Roll Dice",
+        "fontSize": 14.0,
+        "fontStyle": "Normal",
+        "textColor": "#87CEEB",
+        
+        "isInteractive": true,
+        "clickAction": "RollDice",
+        "isVisible": true,
+        
+        "parentId": "",
+        "childIds": []
+      }
+    ],
+    
+    "themeName": "Dice Race Theme",
+    "themeColors": {
+      "Primary": "#2B4A6F",
+      "Secondary": "#4A7BA7",
+      "Accent": "#87CEEB",
+      "Text": "#FFFFFF",
+      "Background": "#1A2F4A",
+      "ButtonNormal": "#2B4A6F",
+      "ButtonHighlight": "#4A7BA7",
+      "ButtonPressed": "#1A2F4A",
+      "TileRed": "#FF0000",
+      "TileBlue": "#0000FF",
+      "TileYellow": "#FFFF00",
+      "TileGreen": "#00FF00"
+    }
+  }
+}

@@ -3,6 +3,13 @@ using Unity.Netcode;
 using System.Collections.Generic;
 using System;
 
+/// <summary>
+/// OBSOLETE: Use HybridGameManager with GameRules.CreateDiceRaceRules() instead.
+/// This manager is deprecated and will be removed in a future update.
+/// All Dice Race games should now route through HybridGameManager + Modules.
+/// See STANDARD_GAME_LIBRARY_IMPLEMENTATION.md for migration guide.
+/// </summary>
+[Obsolete("Use HybridGameManager with GameRules.CreateDiceRaceRules() and CustomGameSpawner instead.")]
 public class NetworkGameManager : NetworkBehaviour
 {
     private static NetworkGameManager instance;
@@ -274,7 +281,54 @@ public class NetworkGameManager : NetworkBehaviour
         
         // Check for win condition (assuming winning position is the last tile)
         var (tileCount, playerCount) = GameSetupManager.Instance.GetGameConfiguration();
-        if (playerPositions[playerId] >= tileCount)
+        
+        // Get active rules to check win condition
+        GameRules activeRules = null;
+        if (RuleEditorManager.Instance != null)
+        {
+            activeRules = RuleEditorManager.Instance.GetCurrentRules();
+        }
+        
+        bool hasWon = false;
+        
+        if (activeRules != null)
+        {
+            // Check win condition based on rules
+            switch (activeRules.winCondition)
+            {
+                case WinCondition.ReachGoal:
+                    // Reach the last tile
+                    hasWon = playerPositions[playerId] >= tileCount;
+                    break;
+                    
+                case WinCondition.ReachSpecificTile:
+                    // Reach a specific target tile
+                    hasWon = playerPositions[playerId] >= activeRules.targetTileNumber;
+                    if (hasWon)
+                    {
+                        Debug.Log($"Player {playerId} reached target tile {activeRules.targetTileNumber}!");
+                    }
+                    break;
+                    
+                case WinCondition.LastPlayerStanding:
+                    // This is checked differently (bankruptcy/elimination)
+                    // For simple dice race, treat as reaching goal
+                    hasWon = playerPositions[playerId] >= tileCount;
+                    break;
+                    
+                default:
+                    // Default to reaching last tile
+                    hasWon = playerPositions[playerId] >= tileCount;
+                    break;
+            }
+        }
+        else
+        {
+            // Fallback: Reach last tile if no rules found
+            hasWon = playerPositions[playerId] >= tileCount;
+        }
+        
+        if (hasWon)
         {
             // Player won!
             Debug.Log($"Player {playerId} wins the game!");
