@@ -42,7 +42,8 @@ public class SavedGameInfo
         }
         else
         {
-            return $"Custom {gameType} • {playerCount} Players • Modified {lastModifiedDate:MMM dd}";
+            return $"Custom {gameType} • {playerCount} Players \n" +
+                $"Modified {lastModifiedDate:MMM dd}";
         }
     }
 

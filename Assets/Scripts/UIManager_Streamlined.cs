@@ -47,6 +47,7 @@ public class UIManager_Streamlined : MonoBehaviour
     [SerializeField] private Button backFromSavedGamesButton;
     [SerializeField] private TextMeshProUGUI noSavedGamesText;
     [SerializeField] private TMPro.TMP_Dropdown filterDropdown;
+    [SerializeField] private TMP_FontAsset headerFont;
     #endregion
 
     #region Join Panel
@@ -108,7 +109,7 @@ public class UIManager_Streamlined : MonoBehaviour
         }
 
         filterDropdown.ClearOptions();
-        filterDropdown.AddOptions(new List<string> { "Standard Games", "Custom Games" });
+        filterDropdown.AddOptions(new List<string> { "STANDARD GAMES", "CUSTOM GAMES" });
 
         filterDropdown.onValueChanged.RemoveAllListeners();
         filterDropdown.onValueChanged.AddListener(_ =>
@@ -596,7 +597,7 @@ public class UIManager_Streamlined : MonoBehaviour
 
         // Check if we have any games to display
         int totalGames = standardGames.Count + customGames.Count;
-        Debug.Log($"[UIManager_Streamlined] Total games to display: {totalGames} (Standard: {standardGames.Count}, Custom: {customGames.Count})");
+        Debug.Log($"[UIManager_Streamlined] Total games to display: {totalGames} (StandStandard Gamesard: {standardGames.Count}, Custom: {customGames.Count})");
 
         if (totalGames == 0)
         {
@@ -632,7 +633,7 @@ public class UIManager_Streamlined : MonoBehaviour
             // Show only Standard Games
             if (standardGames.Count > 0)
             {
-                AddSectionHeader("Standard Games");
+                AddSectionHeader("STANDARD GAMES");
                 foreach (var game in standardGames)
                 {
                     GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
@@ -642,7 +643,7 @@ public class UIManager_Streamlined : MonoBehaviour
             else
             {
                 // Optional: show message if no standard games
-                AddSectionHeader("Standard Games");
+                AddSectionHeader("STANDARD GAMES");
             }
         }
         else
@@ -650,7 +651,7 @@ public class UIManager_Streamlined : MonoBehaviour
             // Show only Custom Games
             if (customGames.Count > 0)
             {
-                AddSectionHeader("Custom Games");
+                AddSectionHeader("CUSTOM GAMES");
                 foreach (var game in customGames)
                 {
                     GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
@@ -660,7 +661,7 @@ public class UIManager_Streamlined : MonoBehaviour
             else
             {
                 // Optional: show message if no custom games
-                AddSectionHeader("Custom Games");
+                AddSectionHeader("CUSTOM GAMES");
             }
         }
 
@@ -688,6 +689,13 @@ public class UIManager_Streamlined : MonoBehaviour
         headerTextComponent.alignment = TextAlignmentOptions.Left;
         headerTextComponent.color = new Color(0.8f, 0.8f, 0.8f, 1f);
         headerTextComponent.margin = new Vector4(10, 10, 10, 5);
+
+        // assign TMP font asset here through script and font size
+        if (headerFont != null)
+        {
+            headerTextComponent.font = headerFont;
+            headerTextComponent.fontSize = 30;
+        }
         
         // Add layout element
         var layoutElement = headerObject.AddComponent<UnityEngine.UI.LayoutElement>();
@@ -707,29 +715,41 @@ public class UIManager_Streamlined : MonoBehaviour
             else if (t.gameObject.name == "GameDetailsText") gameDetailsText = t;
         }
 
-        // Find the host button anywhere under this prefab even if it is nested
-        Button hostButton = null;
-        foreach (var b in listItem.GetComponentsInChildren<Button>(true))
+        if (gameNameText != null)
         {
-            if (b.gameObject.name == "HostButton")
-            {
-                hostButton = b;
-                break;
-            }
+            gameNameText.text = gameInfo.gameName;
+            gameNameText.color = Color.white;
         }
-
-        if (gameNameText != null) gameNameText.text = gameInfo.gameName;
         else Debug.LogWarning("[UIManager_Streamlined] GameNameText not found in prefab instance.");
 
-        if (gameDetailsText != null) gameDetailsText.text = gameInfo.GetDescription();
+        if (gameDetailsText != null)
+        {
+            string description = gameInfo.GetDescription();
+
+            // Replace "Modified ..." part with yellow rich text
+            if (!gameInfo.isStandardGame)
+            {
+                description = description.Replace(
+                    $"Modified {gameInfo.lastModifiedDate:MMM dd}",
+                    $"<color=#FFD700>Modified {gameInfo.lastModifiedDate:MMM dd}</color>"
+                );
+            }
+
+            gameDetailsText.text = description;
+        }
         else Debug.LogWarning("[UIManager_Streamlined] GameDetailsText not found in prefab instance.");
 
-        if (hostButton != null)
+        Button button = listItem.GetComponent<Button>();
+        if (button != null)
         {
-            hostButton.onClick.RemoveAllListeners(); // prevents duplicate listeners if rebuilt
-            hostButton.onClick.AddListener(() => OnHostSavedGameClicked(gameInfo));
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => OnHostSavedGameClicked(gameInfo));
         }
-        else Debug.LogWarning("[UIManager_Streamlined] HostButton not found in prefab instance.");
+        else
+        {
+            Debug.LogWarning("[UIManager_Streamlined] No Button found on SavedGameItemPrefab root. Add a Button component to the prefab root.");
+        }
+
     }
 
 
