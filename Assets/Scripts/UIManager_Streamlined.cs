@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using System.Collections;
+using System.Linq;
 
 /// <summary>
 /// Streamlined UIManager focused on core menu flow:
@@ -45,6 +46,7 @@ public class UIManager_Streamlined : MonoBehaviour
     [SerializeField] private GameObject savedGameItemPrefab;
     [SerializeField] private Button backFromSavedGamesButton;
     [SerializeField] private TextMeshProUGUI noSavedGamesText;
+    [SerializeField] private TMPro.TMP_Dropdown filterDropdown;
     #endregion
 
     #region Join Panel
@@ -92,7 +94,34 @@ public class UIManager_Streamlined : MonoBehaviour
     {
         SetupButtonListeners();
         ShowMainMenu();
+
         SetupPlayerListLayout();
+
+        SetupFilterDropdown();
+    }
+
+    private void SetupFilterDropdown()
+    {
+        if (filterDropdown == null)
+        {
+            return;
+        }
+
+        filterDropdown.ClearOptions();
+        filterDropdown.AddOptions(new List<string> { "Standard Games", "Custom Games" });
+
+        filterDropdown.onValueChanged.RemoveAllListeners();
+        filterDropdown.onValueChanged.AddListener(_ =>
+        {
+            // only rebuild if the saved games panel is currently open 
+            if (savedGamesPanel != null && savedGamesPanel.activeInHierarchy)
+            {
+                LoadSavedGamesList();
+            }
+        });
+
+        filterDropdown.value = 0; // default to standard
+        filterDropdown.RefreshShownValue();
     }
     #endregion
 
@@ -498,7 +527,7 @@ public class UIManager_Streamlined : MonoBehaviour
     private void LoadSavedGamesList()
     {
         Debug.Log("[UIManager_Streamlined] ========== LoadSavedGamesList START ==========");
-        
+
         if (savedGamesListContent == null || savedGameItemPrefab == null)
         {
             Debug.LogError("[UIManager_Streamlined] ? Saved games list content or prefab not assigned!");
@@ -512,6 +541,10 @@ public class UIManager_Streamlined : MonoBehaviour
         // Clear existing list
         foreach (Transform child in savedGamesListContent)
         {
+            if (filterDropdown != null && child == filterDropdown.transform)
+            {
+                continue;
+            }
             Destroy(child.gameObject);
         }
 
@@ -519,15 +552,15 @@ public class UIManager_Streamlined : MonoBehaviour
 
         // Get standard games from library
         List<SavedGameInfo> standardGames = new List<SavedGameInfo>();
-        
+
         Debug.Log($"[UIManager_Streamlined] Checking StandardGameLibrary.Instance... (null? {StandardGameLibrary.Instance == null})");
-        
+
         if (StandardGameLibrary.Instance != null)
         {
             Debug.Log("[UIManager_Streamlined] ? StandardGameLibrary instance found!");
             standardGames = StandardGameLibrary.Instance.GetAllStandardGames();
             Debug.Log($"[UIManager_Streamlined] ? Loaded {standardGames.Count} standard games from library");
-            
+
             foreach (var game in standardGames)
             {
                 Debug.Log($"  - {game.gameName} ({game.gameType}, {game.playerCount}P)");
@@ -541,15 +574,15 @@ public class UIManager_Streamlined : MonoBehaviour
 
         // Load custom saved games from disk
         List<SavedGameInfo> customGames = new List<SavedGameInfo>();
-        
+
         Debug.Log($"[UIManager_Streamlined] Checking GameSaveManager.Instance... (null? {GameSaveManager.Instance == null})");
-        
+
         if (GameSaveManager.Instance != null)
         {
             Debug.Log("[UIManager_Streamlined] ? GameSaveManager instance found!");
             customGames = GameSaveManager.Instance.LoadAllGames();
             Debug.Log($"[UIManager_Streamlined] ? Loaded {customGames.Count} custom games from disk");
-            
+
             foreach (var game in customGames)
             {
                 Debug.Log($"  - {game.gameName} ({game.gameType}, {game.playerCount}P)");
@@ -564,11 +597,11 @@ public class UIManager_Streamlined : MonoBehaviour
         // Check if we have any games to display
         int totalGames = standardGames.Count + customGames.Count;
         Debug.Log($"[UIManager_Streamlined] Total games to display: {totalGames} (Standard: {standardGames.Count}, Custom: {customGames.Count})");
-        
+
         if (totalGames == 0)
         {
             Debug.LogWarning("[UIManager_Streamlined] ?? No games found - showing 'no games' message");
-            
+
             if (noSavedGamesText != null)
             {
                 noSavedGamesText.gameObject.SetActive(true);
@@ -579,7 +612,7 @@ public class UIManager_Streamlined : MonoBehaviour
             {
                 Debug.LogError("[UIManager_Streamlined] ? noSavedGamesText is NULL!");
             }
-            
+
             Debug.Log("[UIManager_Streamlined] ========== LoadSavedGamesList END (No Games) ==========");
             return;
         }
@@ -591,36 +624,44 @@ public class UIManager_Streamlined : MonoBehaviour
             Debug.Log("[UIManager_Streamlined] Hidden 'no games' message");
         }
 
-        // Add Standard Games Section
-        if (standardGames.Count > 0)
-        {
-            Debug.Log("[UIManager_Streamlined] Adding 'Standard Games' section...");
-            AddSectionHeader("Standard Games");
-            
-            foreach (var game in standardGames)
-            {
-                Debug.Log($"[UIManager_Streamlined] Creating list item for: {game.gameName}");
-                GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
-                SetupSavedGameListItem(listItem, game);
-            }
-            
-            Debug.Log("[UIManager_Streamlined] ? Standard games section complete");
-        }
+        // decide which list to show based on dropdown
+        bool showStandard = (filterDropdown == null || filterDropdown.value == 0);
 
-        // Add Custom Games Section
-        if (customGames.Count > 0)
+        if (showStandard)
         {
-            Debug.Log("[UIManager_Streamlined] Adding 'Custom Games' section...");
-            AddSectionHeader("Custom Games");
-            
-            foreach (var game in customGames)
+            // Show only Standard Games
+            if (standardGames.Count > 0)
             {
-                Debug.Log($"[UIManager_Streamlined] Creating list item for: {game.gameName}");
-                GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
-                SetupSavedGameListItem(listItem, game);
+                AddSectionHeader("Standard Games");
+                foreach (var game in standardGames)
+                {
+                    GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
+                    SetupSavedGameListItem(listItem, game);
+                }
             }
-            
-            Debug.Log("[UIManager_Streamlined] ? Custom games section complete");
+            else
+            {
+                // Optional: show message if no standard games
+                AddSectionHeader("Standard Games");
+            }
+        }
+        else
+        {
+            // Show only Custom Games
+            if (customGames.Count > 0)
+            {
+                AddSectionHeader("Custom Games");
+                foreach (var game in customGames)
+                {
+                    GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
+                    SetupSavedGameListItem(listItem, game);
+                }
+            }
+            else
+            {
+                // Optional: show message if no custom games
+                AddSectionHeader("Custom Games");
+            }
         }
 
         // Force layout update
