@@ -97,7 +97,7 @@ public class StandardGameLibrary : MonoBehaviour
         
         return new SavedGameInfo(
             gameName: "Classic Monopoly",
-            gameType: "Monopoly",
+            gameType: 1,
             playerCount: 4,
             rules: rules,
             isStandardGame: true
@@ -113,7 +113,7 @@ public class StandardGameLibrary : MonoBehaviour
         
         return new SavedGameInfo(
             gameName: "Classic Battleships",
-            gameType: "Battleships",
+            gameType: 2,
             playerCount: 2,
             rules: rules,
             isStandardGame: true
@@ -129,7 +129,7 @@ public class StandardGameLibrary : MonoBehaviour
         
         return new SavedGameInfo(
             gameName: "Dice Race",
-            gameType: "Dice Race",
+            gameType: 3,
             playerCount: 4,
             rules: rules,
             isStandardGame: true
@@ -159,34 +159,31 @@ public class StandardGameLibrary : MonoBehaviour
     /// <summary>
     /// Get a standard game by name
     /// </summary>
-    public SavedGameInfo GetStandardGameByName(string gameName)
+    public SavedGameInfo GetStandardGameByName(int gameType)
     {
-        switch (gameName.ToLower())
+        switch (gameType)
         {
-            case "monopoly":
-            case "classic monopoly":
+            case 1:
                 return GetMonopolyRules();
             
-            case "battleships":
-            case "classic battleships":
+            case 2:
                 return GetBattleshipsRules();
             
-            case "dice race":
-            case "dicerace":
+            case 3:
                 return GetDiceRaceRules();
             
             default:
-                Debug.LogWarning($"[StandardGameLibrary] Unknown standard game: {gameName}");
+                Debug.LogWarning($"[StandardGameLibrary] Unknown standard game type: {gameType}");
                 return null;
         }
     }
 
     /// <summary>
-    /// Check if a game name is a standard game
+    /// Check if a game type is a standard game (1, 2, or 3)
     /// </summary>
-    public bool IsStandardGame(string gameName)
+    public bool IsStandardGame(int gameType)
     {
-        return GetStandardGameByName(gameName) != null;
+        return gameType >= 1 && gameType <= 3;
     }
 
     #endregion
@@ -209,7 +206,7 @@ public class StandardGameLibrary : MonoBehaviour
         
         return new SavedGameInfo(
             gameName: "Speed Monopoly",
-            gameType: "Monopoly",
+            gameType: 1, // Monopoly
             playerCount: 4,
             rules: rules,
             isStandardGame: true
@@ -229,7 +226,7 @@ public class StandardGameLibrary : MonoBehaviour
         
         return new SavedGameInfo(
             gameName: "Naval Warfare",
-            gameType: "Battleships",
+            gameType: 2, // Battleships
             playerCount: 2,
             rules: rules,
             isStandardGame: true

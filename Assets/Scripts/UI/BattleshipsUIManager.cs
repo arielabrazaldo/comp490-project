@@ -265,6 +265,19 @@ public class BattleshipsUIManager : MonoBehaviour
 
         if (shipPlacementPanel) shipPlacementPanel.SetActive(true);
 
+        // CRITICAL: Generate boards FIRST before activating panels
+        BattleshipsBoardGenerator boardGenerator = FindFirstObjectByType<BattleshipsBoardGenerator>();
+        if (boardGenerator != null)
+        {
+            Debug.Log("[BattleshipsUIManager] Generating boards before showing ship placement panel...");
+            boardGenerator.GenerateBoards();
+            Debug.Log("[BattleshipsUIManager] ? Boards generated");
+        }
+        else
+        {
+            Debug.LogError("[BattleshipsUIManager] ? BattleshipsBoardGenerator not found in scene!");
+        }
+
         // CRITICAL: Activate BoardPanel with ONLY player board visible
         if (boardPanel)
         {
@@ -1415,9 +1428,9 @@ public class BattleshipsUIManager : MonoBehaviour
             }
 
             // Return to main menu
-            if (UIManager.Instance != null)
+            if (UIManager_Streamlined.Instance != null)
             {
-                UIManager.Instance.ShowGameModeSelectionPublic();
+                UIManager_Streamlined.Instance.ShowGameModeSelectionPublic();
                 Debug.Log("? Returned to main menu");
             }
         }
@@ -1427,9 +1440,9 @@ public class BattleshipsUIManager : MonoBehaviour
 
             // Force hide panels and return to menu anyway
             HideAllPanels();
-            if (UIManager.Instance != null)
+            if (UIManager_Streamlined.Instance != null)
             {
-                UIManager.Instance.ShowGameModeSelectionPublic();
+                UIManager_Streamlined.Instance.ShowGameModeSelectionPublic();
             }
         }
         finally
@@ -1642,7 +1655,9 @@ public class BattleshipsUIManager : MonoBehaviour
         switch (newState)
         {
             case BattleshipsGameManager.GameState.WaitingToStart:
-                ShowWaitingPanel("Waiting for game to start...");
+                // DON'T show waiting panel here - we're still in the lobby
+                // The waiting panel is only for waiting between ship placement and combat
+                Debug.Log("[BattleshipsUIManager] Game state is WaitingToStart - panels will show when PlacingShips begins");
                 break;
             case BattleshipsGameManager.GameState.PlacingShips:
                 ShowShipPlacementPanel();

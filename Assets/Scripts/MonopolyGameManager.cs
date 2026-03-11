@@ -4,12 +4,9 @@ using System.Collections.Generic;
 using System;
 
 /// <summary>
-/// OBSOLETE: Use HybridGameManager with GameRules.CreateMonopolyRules() instead.
-/// This manager is deprecated and will be removed in a future update.
-/// All Monopoly games should now route through HybridGameManager + Modules.
-/// See STANDARD_GAME_LIBRARY_IMPLEMENTATION.md for migration guide.
+/// Manages Monopoly game logic and network synchronization.
+/// For custom games, consider using HybridGameManager with GameRules.CreateMonopolyRules().
 /// </summary>
-[Obsolete("Use HybridGameManager with GameRules.CreateMonopolyRules() and CustomGameSpawner instead.")]
 public class MonopolyGameManager : NetworkBehaviour
 {
     private static MonopolyGameManager instance;
@@ -34,12 +31,14 @@ public class MonopolyGameManager : NetworkBehaviour
     private NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(GameState.WaitingToStart);
     private NetworkVariable<int> totalPlayers = new NetworkVariable<int>(0);
     
-    // Player data
-    private NetworkList<MonopolyPlayerData> players;
+    // Player data - MUST be initialized at field declaration for NetworkList
+    private NetworkList<MonopolyPlayerData> players = new NetworkList<MonopolyPlayerData>();
     
     // Board data  
     private List<MonopolySpace> board;
-    private NetworkList<PropertyOwnership> propertyOwnerships;
+    
+    // Property ownership - MUST be initialized at field declaration for NetworkList
+    private NetworkList<PropertyOwnership> propertyOwnerships = new NetworkList<PropertyOwnership>();
     
     // Game variables
     private NetworkVariable<int> currentDiceRoll = new NetworkVariable<int>(0);
@@ -154,10 +153,29 @@ public class MonopolyGameManager : NetworkBehaviour
 
     private void Awake()
     {
+        Debug.Log($"[MonopolyGameManager] Awake called on {gameObject.name}");
+        
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject);
+            
+            // CRITICAL: Don't detach from parent if we have a NetworkObject component
+            // NetworkObject handles its own lifecycle and detaching causes errors
+            NetworkObject networkObject = GetComponent<NetworkObject>();
+            if (networkObject == null && transform.parent != null)
+            {
+                Debug.Log($"[MonopolyGameManager] Has parent and no NetworkObject, detaching for DontDestroyOnLoad");
+                transform.SetParent(null);
+                DontDestroyOnLoad(gameObject);
+            }
+            else if (networkObject != null)
+            {
+                Debug.Log($"[MonopolyGameManager] Has NetworkObject component - skipping DontDestroyOnLoad (NetworkObject manages lifecycle)");
+            }
+            else
+            {
+                DontDestroyOnLoad(gameObject);
+            }
         }
         else if (instance != this)
         {
@@ -165,12 +183,14 @@ public class MonopolyGameManager : NetworkBehaviour
             return;
         }
 
-        // Initialize NetworkLists
-        players = new NetworkList<MonopolyPlayerData>();
-        propertyOwnerships = new NetworkList<PropertyOwnership>();
+        // NetworkLists are now initialized at field declaration (required by Netcode)
+        // Just initialize non-network data here
         
         // Initialize board
-        board = MonopolyBoard.CreateStandardBoard();
+        if (board == null)
+        {
+            board = MonopolyBoard.CreateStandardBoard();
+        }
         
         // Initialize card decks
         InitializeCardDecks();
@@ -342,22 +362,29 @@ public class MonopolyGameManager : NetworkBehaviour
     /// </summary>
     public void InitializeGame(int playerCount)
     {
+        // Check if we're spawned on the network first
+        if (!IsSpawned)
+        {
+            Debug.LogError("[MonopolyGameManager] Cannot initialize - not spawned on network yet!");
+            return;
+        }
+        
         if (!IsHost)
         {
-            Debug.LogWarning("Only the host can initialize the game!");
+            Debug.LogWarning("[MonopolyGameManager] Only the host can initialize the game!");
             return;
         }
 
         // Ensure we have at least 1 player
         if (playerCount < 1)
         {
-            Debug.LogError($"Invalid player count: {playerCount}. Using 1 player instead.");
+            Debug.LogError($"[MonopolyGameManager] Invalid player count: {playerCount}. Using 1 player instead.");
             playerCount = 1;
         }
         
         // Clamp to allowed range
         playerCount = Mathf.Clamp(playerCount, minPlayers, maxPlayers);
-        Debug.Log($"Initializing Monopoly game with {playerCount} players (min: {minPlayers}, max: {maxPlayers})");
+        Debug.Log($"[MonopolyGameManager] Initializing game with {playerCount} players (min: {minPlayers}, max: {maxPlayers})");
         
         totalPlayers.Value = playerCount;
         
@@ -1581,7 +1608,7 @@ public class MonopolyGameManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// NEW: Update player data (for trading)
+    /// Update player data (for trading)
     /// </summary>
     public void UpdatePlayerData(int playerId, MonopolyPlayerData newData)
     {
@@ -1594,7 +1621,7 @@ public class MonopolyGameManager : NetworkBehaviour
     }
     
     /// <summary>
-    /// NEW: Transfer property ownership (for trading)
+    /// Transfer property ownership (for trading)
     /// </summary>
     public void TransferProperty(int propertyId, int newOwnerId)
     {

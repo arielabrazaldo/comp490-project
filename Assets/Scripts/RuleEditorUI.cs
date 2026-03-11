@@ -1264,11 +1264,13 @@ public class RuleEditorUI : MonoBehaviour
         }
         else
         {
-            // Fallback to old UIManager
+            // Fallback to old UIManager (suppress obsolete warning since this is intentional fallback)
             UIManager oldUI = FindFirstObjectByType<UIManager>();
             if (oldUI != null)
             {
+                #pragma warning disable CS0618 // Intentional use of deprecated UIManager for backwards compatibility
                 oldUI.OnRulesConfigured(currentRules);
+                #pragma warning restore CS0618
                 Debug.Log("[RuleEditorUI] Called UIManager.OnRulesConfigured");
             }
             else

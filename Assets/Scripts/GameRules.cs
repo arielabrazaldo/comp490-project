@@ -10,7 +10,8 @@ public enum WinCondition
     LastPlayerStanding,     // Be the last player remaining (Monopoly/Battleships)
     HighestScore,           // Have the highest score at end
     EliminateAllEnemies,    // Eliminate all other players (Battleships)
-    MoneyThreshold          // Reach a money threshold (Monopoly)
+    MoneyThreshold,         // Reach a money threshold (Monopoly)
+    ReachSpecificTile       // Reach a specific tile number (NEW)
 }
 
 /// <summary>
@@ -52,6 +53,7 @@ public class GameRules
     public bool lastPlayerStandingWins = true;
     public bool moneyThresholdWins = false;
     public int winningMoneyThreshold = 5000;
+    public int targetTileNumber = 20; // NEW: Target tile for ReachSpecificTile win condition
     
     [Header("Dice Mechanics")]
     public bool enableCustomDice = false;
@@ -173,9 +175,10 @@ public class GameRules
             enemyTokenVisibilityRange = -1, // Unlimited visibility
             minPlayers = 2,
             maxPlayers = 4,
-            winCondition = WinCondition.ReachGoal,
-            lastPlayerStandingWins = true, // CRITICAL FIX: Enable this to pass validation (first to finish wins)
+            winCondition = WinCondition.ReachSpecificTile,
+            lastPlayerStandingWins = false, // FIXED: Set to false since we use ReachSpecificTile
             moneyThresholdWins = false,
+            targetTileNumber = 20, // Target tile to reach
             enableCustomDice = false,
             numberOfDice = 1,
             diceSides = 6,
@@ -275,10 +278,32 @@ public class GameRules
             return false;
         }
         
-        if (!lastPlayerStandingWins && !moneyThresholdWins)
+        // For ReachGoal win condition, lastPlayerStandingWins acts as "first to reach wins"
+        bool hasVictoryCondition = lastPlayerStandingWins || moneyThresholdWins || 
+                                   winCondition == WinCondition.ReachGoal ||
+                                   winCondition == WinCondition.EliminateAllEnemies ||
+                                   winCondition == WinCondition.ReachSpecificTile; // NEW: Add ReachSpecificTile validation
+
+        if (!hasVictoryCondition)
         {
             errorMessage = "At least one victory condition must be enabled";
             return false;
+        }
+        
+        // NEW: Validate target tile number for ReachSpecificTile win condition
+        if (winCondition == WinCondition.ReachSpecificTile)
+        {
+            if (targetTileNumber < 1)
+            {
+                errorMessage = "Target tile number must be at least 1";
+                return false;
+            }
+            
+            if (targetTileNumber > tilesPerSide)
+            {
+                errorMessage = $"Target tile number ({targetTileNumber}) cannot exceed board size ({tilesPerSide})";
+                return false;
+            }
         }
         
         if (tilesPerSide < 4)
@@ -373,6 +398,7 @@ public class GameRules
             lastPlayerStandingWins = this.lastPlayerStandingWins,
             moneyThresholdWins = this.moneyThresholdWins,
             winningMoneyThreshold = this.winningMoneyThreshold,
+            targetTileNumber = this.targetTileNumber, // NEW: Clone target tile number
             enableCustomDice = this.enableCustomDice,
             numberOfDice = this.numberOfDice,
             diceSides = this.diceSides,
@@ -410,7 +436,14 @@ public class GameRules
         }
         
         summary += $"- Players: {minPlayers}-{maxPlayers}\n";
-        summary += $"- Win Condition: {winCondition}\n";
+        summary += $"- Win Condition: {winCondition}";
+        
+        // NEW: Add target tile info for ReachSpecificTile win condition
+        if (winCondition == WinCondition.ReachSpecificTile)
+        {
+            summary += $" (Tile #{targetTileNumber})";
+        }
+        summary += "\n";
         
         // Dice summary
         if (enableCustomDice)

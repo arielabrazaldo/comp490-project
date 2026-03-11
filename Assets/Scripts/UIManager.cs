@@ -1275,13 +1275,9 @@ public class UIManager : MonoBehaviour
     /// </summary>
     private async void OnHostSavedGameClicked(SavedGameInfo gameInfo)
     {
-        Debug.Log($"Hosting saved game: {gameInfo.gameName}");
+        Debug.Log($"Hosting saved game: {gameInfo.gameName} (Type: {gameInfo.gameType})");
 
-        // TODO: Load rules from disk (will implement later)
-        // For now, use placeholder rules
-        GameRules rules = gameInfo.rules;
-
-        if (rules == null)
+        if (gameInfo.rules == null)
         {
             SetStatusError("Failed to load game rules!");
             return;
@@ -1291,22 +1287,19 @@ public class UIManager : MonoBehaviour
 
         try
         {
-            // Set game mode flags based on game type
+            // Set game mode flags based on EXPLICIT game type int (no analyzer needed)
+            // 1=Monopoly, 2=Battleships, 3=DiceRace, 4=Hybrid
             switch (gameInfo.gameType)
             {
-                case "Monopoly":
+                case 1: // Monopoly
                     isMonopolyMode = true;
                     isBattleshipsMode = false;
                     break;
-                case "Battleships":
+                case 2: // Battleships
                     isBattleshipsMode = true;
                     isMonopolyMode = false;
                     break;
-                case "Dice Race":
-                    isMonopolyMode = false;
-                    isBattleshipsMode = false;
-                    break;
-                case "Hybrid":
+                default: // Dice Race (3), Hybrid (4), or unknown
                     isMonopolyMode = false;
                     isBattleshipsMode = false;
                     break;
@@ -1327,10 +1320,11 @@ public class UIManager : MonoBehaviour
                     lobbyTitleText.text = gameInfo.gameName;
                 }
 
-                // Store rules in RuleEditorManager so they can be used when starting the game
+                // Store FULL game info (including game type) in RuleEditorManager
+                // This allows CustomGameSpawner to use explicit type instead of analyzing
                 if (RuleEditorManager.Instance != null)
                 {
-                    RuleEditorManager.Instance.SetRules(rules);
+                    RuleEditorManager.Instance.SetCurrentGameInfo(gameInfo);
                 }
 
                 SetStatusSuccess($"Lobby created! Code: {lobbyCode}");
@@ -1731,49 +1725,33 @@ public class UIManager : MonoBehaviour
     /// Called from RuleEditorUI after user finishes configuring rules
     /// Now prompts user to name and save the game
     /// </summary>
+    [System.Obsolete("UIManager is deprecated. Use UIManager_Streamlined instead.")]
     public async void OnRulesConfigured(GameRules rules)
     {
         Debug.Log("[UIManager] Rules configured, prompting user to save game...");
 
-        // TODO: Show dialog to name and save the game
-        // For now, auto-generate name and create lobby directly
+        // Determine game type from rules (no analyzer needed)
+        int gameType = DetermineGameTypeFromRules(rules);
+        int playerCount = DeterminePlayerCountFromRules(rules);
+        string lobbyName = $"{GetGameTypeName(gameType)} Game ({playerCount}P)";
 
-        // Analyze rules to determine game type
-        string gameType = "Custom Game";
-        string lobbyName = "Custom Game";
-
-        if (CustomGameAnalyzer.Instance != null)
+        // Set game mode flags based on detected type
+        // 1=Monopoly, 2=Battleships, 3=DiceRace, 4=Hybrid
+        switch (gameType)
         {
-            var detectedType = CustomGameAnalyzer.Instance.AnalyzeGameRules(rules);
-            int playerCount = CustomGameAnalyzer.Instance.GetRecommendedPlayerCount(detectedType, rules);
-            gameType = detectedType.ToString();
-            lobbyName = $"{detectedType} Game ({playerCount}P)";
-
-            // Set game mode flags based on detected type
-            switch (detectedType)
-            {
-                case CustomGameAnalyzer.DetectedGameType.Monopoly:
-                    isMonopolyMode = true;
-                    isBattleshipsMode = false;
-                    break;
-                case CustomGameAnalyzer.DetectedGameType.Battleships:
-                    isBattleshipsMode = true;
-                    isMonopolyMode = false;
-                    break;
-                case CustomGameAnalyzer.DetectedGameType.DiceRace:
-                    isMonopolyMode = false;
-                    isBattleshipsMode = false;
-                    break;
-                case CustomGameAnalyzer.DetectedGameType.Hybrid:
-                    isMonopolyMode = false;
-                    isBattleshipsMode = false;
-                    break;
-            }
+            case 1: // Monopoly
+                isMonopolyMode = true;
+                isBattleshipsMode = false;
+                break;
+            case 2: // Battleships
+                isBattleshipsMode = true;
+                isMonopolyMode = false;
+                break;
+            default:
+                isMonopolyMode = false;
+                isBattleshipsMode = false;
+                break;
         }
-
-        // TODO: Save game to disk here (will implement later)
-        // SavedGameInfo savedGame = new SavedGameInfo(lobbyName, gameType, rules);
-        // SaveGameToDisk(savedGame);
 
         SetStatusInfo($"Creating {lobbyName}...");
 
@@ -1806,6 +1784,46 @@ public class UIManager : MonoBehaviour
             SetStatusError($"Error: {e.Message}");
             Debug.LogError($"[UIManager] Lobby creation error: {e}");
         }
+    }
+
+    /// <summary>
+    /// Get display name for game type int
+    /// </summary>
+    private string GetGameTypeName(int gameType)
+    {
+        return gameType switch
+        {
+            1 => "Monopoly",
+            2 => "Battleships",
+            3 => "Dice Race",
+            4 => "Hybrid",
+            _ => "Unknown"
+        };
+    }
+
+    /// <summary>
+    /// Determine game type from rules without using CustomGameAnalyzer.
+    /// Returns: 1=Monopoly, 2=Battleships, 3=DiceRace, 4=Hybrid
+    /// </summary>
+    private int DetermineGameTypeFromRules(GameRules rules)
+    {
+        if (rules.enableCurrency && rules.canPurchaseProperties && rules.enableRentCollection)
+            return 1; // Monopoly
+        if (rules.separatePlayerBoards && rules.enableCombat && rules.enableShipPlacement)
+            return 2; // Battleships
+        if (!rules.enableCurrency && !rules.canPurchaseProperties && !rules.enableCombat)
+            return 3; // Dice Race
+        return 4; // Hybrid
+    }
+
+    /// <summary>
+    /// Determine recommended player count from rules.
+    /// </summary>
+    private int DeterminePlayerCountFromRules(GameRules rules)
+    {
+        if (rules.separatePlayerBoards && rules.enableCombat)
+            return 2;
+        return Mathf.Clamp(rules.maxPlayers, 2, 4);
     }
 
     #endregion

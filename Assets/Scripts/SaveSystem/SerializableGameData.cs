@@ -11,7 +11,7 @@ public class SerializableGameData
 {
     // Metadata
     public string gameName;
-    public string gameType;
+    public int gameType;
     public int playerCount;
     public bool isStandardGame;
     public string createdDate;
@@ -20,8 +20,11 @@ public class SerializableGameData
     // Game Rules (all settings)
     public SerializableGameRules rules;
 
-    // Board Layout (for custom boards)
-    public SerializableBoardLayout boardLayout;
+    // Board Layout (for custom boards) - ENHANCED
+    public SerializableBoardData boardLayout;
+
+    // UI Layout (for custom UI) - NEW
+    public SerializableUILayout uiLayout;
 
     /// <summary>
     /// Create from SavedGameInfo
@@ -38,9 +41,11 @@ public class SerializableGameData
         // Convert GameRules
         rules = new SerializableGameRules(gameInfo.rules);
 
-        // Board layout (if exists)
-        boardLayout = new SerializableBoardLayout();
-        // TODO: Populate from board editor when implemented
+        // Board layout (default empty - will be populated by board editor)
+        boardLayout = new SerializableBoardData();
+        
+        // UI layout (default empty - will be populated by UI designer)
+        uiLayout = new SerializableUILayout();
     }
 
     /// <summary>
@@ -102,6 +107,7 @@ public class SerializableGameRules
     public bool lastPlayerStandingWins;
     public bool moneyThresholdWins;
     public int winningMoneyThreshold;
+    public int targetTileNumber; // NEW: Target tile for ReachSpecificTile win condition
 
     // Dice Mechanics
     public bool enableCustomDice;
@@ -151,6 +157,7 @@ public class SerializableGameRules
         lastPlayerStandingWins = rules.lastPlayerStandingWins;
         moneyThresholdWins = rules.moneyThresholdWins;
         winningMoneyThreshold = rules.winningMoneyThreshold;
+        targetTileNumber = rules.targetTileNumber; // NEW: Serialize target tile number
 
         enableCustomDice = rules.enableCustomDice;
         numberOfDice = rules.numberOfDice;
@@ -200,6 +207,7 @@ public class SerializableGameRules
             lastPlayerStandingWins = lastPlayerStandingWins,
             moneyThresholdWins = moneyThresholdWins,
             winningMoneyThreshold = winningMoneyThreshold,
+            targetTileNumber = targetTileNumber, // NEW: Deserialize target tile number
 
             enableCustomDice = enableCustomDice,
             numberOfDice = numberOfDice,
@@ -222,7 +230,8 @@ public class SerializableGameRules
 }
 
 /// <summary>
-/// Serializable board layout data for custom boards (future board editor)
+/// DEPRECATED: Old simple board layout (kept for backwards compatibility)
+/// Use SerializableBoardData instead for full tile customization
 /// </summary>
 [Serializable]
 public class SerializableBoardLayout
@@ -234,13 +243,13 @@ public class SerializableBoardLayout
     public int rows;
     public int columns;
 
-    // Tile data (for custom boards)
+    // Tile data (for custom boards) - DEPRECATED: Use SerializableTileData instead
     public List<SerializableTile> tiles;
 
     // Board shape (for irregular boards)
     public bool[] activeTiles; // Flattened 2D array
 
-    // Special spaces
+    // Special spaces - DEPRECATED: Use SerializableTileData.category instead
     public List<SerializableSpecialSpace> specialSpaces;
 
     public SerializableBoardLayout()
@@ -255,7 +264,7 @@ public class SerializableBoardLayout
 }
 
 /// <summary>
-/// Serializable tile data for custom board editor
+/// DEPRECATED: Simple tile data (use SerializableTileData for full features)
 /// </summary>
 [Serializable]
 public class SerializableTile
@@ -279,7 +288,7 @@ public class SerializableTile
 }
 
 /// <summary>
-/// Serializable special space data (Go, Jail, Free Parking, etc.)
+/// DEPRECATED: Simple special space (use SerializableTileData instead)
 /// </summary>
 [Serializable]
 public class SerializableSpecialSpace

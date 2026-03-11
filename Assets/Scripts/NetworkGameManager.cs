@@ -4,12 +4,9 @@ using System.Collections.Generic;
 using System;
 
 /// <summary>
-/// OBSOLETE: Use HybridGameManager with GameRules.CreateDiceRaceRules() instead.
-/// This manager is deprecated and will be removed in a future update.
-/// All Dice Race games should now route through HybridGameManager + Modules.
-/// See STANDARD_GAME_LIBRARY_IMPLEMENTATION.md for migration guide.
+/// Manages Dice Race game logic and network synchronization.
+/// For custom games, consider using HybridGameManager with GameRules.CreateDiceRaceRules().
 /// </summary>
-[Obsolete("Use HybridGameManager with GameRules.CreateDiceRaceRules() and CustomGameSpawner instead.")]
 public class NetworkGameManager : NetworkBehaviour
 {
     private static NetworkGameManager instance;
@@ -29,6 +26,7 @@ public class NetworkGameManager : NetworkBehaviour
     private NetworkVariable<int> currentPlayerTurn = new NetworkVariable<int>(0);
     private NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(GameState.WaitingToStart);
     private NetworkVariable<int> totalPlayers = new NetworkVariable<int>(0);
+    private NetworkVariable<int> tileCount = new NetworkVariable<int>(20); // Synced tile count for board generation
     
     // Player positions on the board (NetworkList for automatic sync)
     private NetworkList<int> playerPositions;
@@ -124,9 +122,17 @@ public class NetworkGameManager : NetworkBehaviour
     {
         if (!IsHost) return;
 
-        Debug.Log($"Initializing game with {playerCount} players");
+        Debug.Log($"[NetworkGameManager] Initializing game with {playerCount} players");
         
         totalPlayers.Value = playerCount;
+        
+        // Get and sync tile count from GameSetupManager
+        if (GameSetupManager.Instance != null)
+        {
+            var (configuredTileCount, _) = GameSetupManager.Instance.GetGameConfiguration();
+            tileCount.Value = configuredTileCount;
+            Debug.Log($"[NetworkGameManager] Syncing tile count: {configuredTileCount}");
+        }
         
         // Initialize player positions (all start at position 1)
         playerPositions.Clear();
@@ -256,6 +262,14 @@ public class NetworkGameManager : NetworkBehaviour
         return totalPlayers.Value;
     }
 
+    /// <summary>
+    /// Get current tile count (board size)
+    /// </summary>
+    public int GetTileCount()
+    {
+        return tileCount.Value;
+    }
+
     [ServerRpc(RequireOwnership = false)]
     private void RollDiceServerRpc(int diceRoll, ServerRpcParams rpcParams = default)
     {
@@ -281,7 +295,54 @@ public class NetworkGameManager : NetworkBehaviour
         
         // Check for win condition (assuming winning position is the last tile)
         var (tileCount, playerCount) = GameSetupManager.Instance.GetGameConfiguration();
-        if (playerPositions[playerId] >= tileCount)
+        
+        // Get active rules to check win condition
+        GameRules activeRules = null;
+        if (RuleEditorManager.Instance != null)
+        {
+            activeRules = RuleEditorManager.Instance.GetCurrentRules();
+        }
+        
+        bool hasWon = false;
+        
+        if (activeRules != null)
+        {
+            // Check win condition based on rules
+            switch (activeRules.winCondition)
+            {
+                case WinCondition.ReachGoal:
+                    // Reach the last tile
+                    hasWon = playerPositions[playerId] >= tileCount;
+                    break;
+                    
+                case WinCondition.ReachSpecificTile:
+                    // Reach a specific target tile
+                    hasWon = playerPositions[playerId] >= activeRules.targetTileNumber;
+                    if (hasWon)
+                    {
+                        Debug.Log($"Player {playerId} reached target tile {activeRules.targetTileNumber}!");
+                    }
+                    break;
+                    
+                case WinCondition.LastPlayerStanding:
+                    // This is checked differently (bankruptcy/elimination)
+                    // For simple dice race, treat as reaching goal
+                    hasWon = playerPositions[playerId] >= tileCount;
+                    break;
+                    
+                default:
+                    // Default to reaching last tile
+                    hasWon = playerPositions[playerId] >= tileCount;
+                    break;
+            }
+        }
+        else
+        {
+            // Fallback: Reach last tile if no rules found
+            hasWon = playerPositions[playerId] >= tileCount;
+        }
+        
+        if (hasWon)
         {
             // Player won!
             Debug.Log($"Player {playerId} wins the game!");
@@ -301,13 +362,41 @@ public class NetworkGameManager : NetworkBehaviour
     [ClientRpc]
     private void StartGameClientRpc()
     {
-        Debug.Log("Game started! Received start game notification.");
+        Debug.Log("[NetworkGameManager] Game started! Received start game notification.");
         
-        // Ensure UI Manager knows about game start
-        if (UIManager.Instance != null)
+        // Generate board on client if not already done (host already has it)
+        if (!IsHost && GameSetupManager.Instance != null)
         {
-            // Force the UI to show the game panel
+            // Use synced tile count from NetworkVariable
+            int syncedTileCount = tileCount.Value;
+            int playerCount = totalPlayers.Value;
+            
+            Debug.Log($"[NetworkGameManager] Client generating board: {syncedTileCount} tiles, {playerCount} players");
+            GameSetupManager.Instance.ConfigureGame(syncedTileCount, playerCount);
+            GameSetupManager.Instance.GenerateBoard();
+        }
+        
+        // Show game UI via DiceRaceUIManager (preferred for Dice Race)
+        if (DiceRaceUIManager.Instance != null)
+        {
+            Debug.Log("[NetworkGameManager] Starting DiceRaceUIManager");
+            DiceRaceUIManager.Instance.StartGame();
+        }
+        // Fallback to legacy UIManager
+        else if (UIManager.Instance != null)
+        {
+            Debug.Log("[NetworkGameManager] Fallback to UIManager.OnNetworkGameStarted");
             UIManager.Instance.OnNetworkGameStarted();
+        }
+        // Also try UIManager_Streamlined
+        else if (UIManager_Streamlined.Instance != null)
+        {
+            Debug.Log("[NetworkGameManager] Using UIManager_Streamlined - hiding lobby");
+            // The DiceRaceUIManager should handle the game UI
+        }
+        else
+        {
+            Debug.LogWarning("[NetworkGameManager] No UI manager found to show game!");
         }
     }
 

@@ -549,11 +549,11 @@ public class BattleshipsSetupManager : MonoBehaviour
 
         if (createBattleshipsLobbyButton != null) createBattleshipsLobbyButton.interactable = false;
 
-        // Notify UIManager to show status
-        if (UIManager.Instance != null)
+        // Notify UIManager_Streamlined to show status
+        if (UIManager_Streamlined.Instance != null)
         {
             string customInfo = isCustomizing ? " (Custom Layout)" : "";
-            UIManager.Instance.SetStatusInfoPublic($"Creating Battleships lobby for {battleshipsPlayerCount} players with {battleshipsMaxRows}x{battleshipsMaxColumns} grid{customInfo}...");
+            UIManager_Streamlined.Instance.SetStatusInfoPublic($"Creating Battleships lobby for {battleshipsPlayerCount} players with {battleshipsMaxRows}x{battleshipsMaxColumns} grid{customInfo}...");
         }
 
         try
@@ -561,18 +561,39 @@ public class BattleshipsSetupManager : MonoBehaviour
             string lobbyCode = await LobbyManager.Instance.CreateLobby($"Battleships - {battleshipsMaxRows}x{battleshipsMaxColumns}");
             if (!string.IsNullOrEmpty(lobbyCode))
             {
-                // DON'T initialize game here - that's done in UIManager.OnStartGameClicked()
-                // Just create the lobby and keep the board configuration intact
+                // CRITICAL: Set the game info so CustomGameSpawner knows this is Battleships
+                GameRules battleshipsRules = GameRules.CreateBattleshipsRules();
+                battleshipsRules.tilesPerSide = battleshipsMaxRows; // Use the configured size
+                battleshipsRules.maxPlayers = battleshipsPlayerCount;
+                
+                SavedGameInfo battleshipsGameInfo = new SavedGameInfo(
+                    gameName: "Classic Battleships",
+                    gameType: 2, // 2 = Battleships
+                    playerCount: battleshipsPlayerCount,
+                    rules: battleshipsRules,
+                    isStandardGame: true
+                );
+                
+                if (RuleEditorManager.Instance != null)
+                {
+                    RuleEditorManager.Instance.SetCurrentGameInfo(battleshipsGameInfo);
+                    Debug.Log($"[BattleshipsSetupManager] Set game info: Battleships (gameType=2, size={battleshipsMaxRows}x{battleshipsMaxColumns})");
+                }
+                else
+                {
+                    Debug.LogWarning("[BattleshipsSetupManager] RuleEditorManager.Instance is null - game type may not be set correctly!");
+                }
 
                 // Hide the Battleships setup panel before showing lobby
                 HideBattleshipsGameSetup();
 
-                if (UIManager.Instance != null)
+                if (UIManager_Streamlined.Instance != null)
                 {
-                    UIManager.Instance.SetLobbyCode(lobbyCode);
-                    UIManager.Instance.SetStatusSuccessPublic($"Battleships lobby created! Code: {lobbyCode}");
-                    UIManager.Instance.ShowLobbyPublic();
-                    UIManager.Instance.UpdatePlayerListPublic();
+                    UIManager_Streamlined.Instance.SetLobbyCode(lobbyCode);
+                    UIManager_Streamlined.Instance.SetLobbyTitle("Battleships");
+                    UIManager_Streamlined.Instance.SetStatusSuccessPublic($"Battleships lobby created! Code: {lobbyCode}");
+                    UIManager_Streamlined.Instance.ShowLobbyPublic();
+                    UIManager_Streamlined.Instance.UpdatePlayerListPublic();
                 }
                 
                 // CRITICAL FIX: DON'T clear grid state here!
@@ -582,17 +603,17 @@ public class BattleshipsSetupManager : MonoBehaviour
             }
             else
             {
-                if (UIManager.Instance != null)
+                if (UIManager_Streamlined.Instance != null)
                 {
-                    UIManager.Instance.SetStatusErrorPublic("Failed to create Battleships lobby. Check console for details.");
+                    UIManager_Streamlined.Instance.SetStatusErrorPublic("Failed to create Battleships lobby. Check console for details.");
                 }
             }
         }
         catch (System.Exception e)
         {
-            if (UIManager.Instance != null)
+            if (UIManager_Streamlined.Instance != null)
             {
-                UIManager.Instance.SetStatusErrorPublic($"Error creating Battleships lobby: {e.Message}");
+                UIManager_Streamlined.Instance.SetStatusErrorPublic($"Error creating Battleships lobby: {e.Message}");
             }
             Debug.LogError($"Exception in OnCreateBattleshipsLobbyButtonClicked: {e}");
         }
@@ -616,10 +637,10 @@ public class BattleshipsSetupManager : MonoBehaviour
         // Hide the Battleships setup panel first
         HideBattleshipsGameSetup();
         
-        // Notify UIManager to show game mode selection
-        if (UIManager.Instance != null)
+        // Notify UIManager_Streamlined to show game mode selection
+        if (UIManager_Streamlined.Instance != null)
         {
-            UIManager.Instance.ShowGameModeSelectionPublic();
+            UIManager_Streamlined.Instance.ShowGameModeSelectionPublic();
         }
     }
 

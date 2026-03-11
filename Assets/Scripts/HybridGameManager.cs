@@ -353,6 +353,9 @@ public class HybridGameManager : NetworkBehaviour
             case WinCondition.ReachGoal:
                 return CheckReachGoalWin(playerId);
                 
+            case WinCondition.ReachSpecificTile: // NEW: Support for ReachSpecificTile
+                return CheckReachSpecificTileWin(playerId);
+                
             case WinCondition.LastPlayerStanding:
                 return CheckLastPlayerStandingWin(playerId);
                 
@@ -363,16 +366,37 @@ public class HybridGameManager : NetworkBehaviour
             case WinCondition.EliminateAllEnemies:
                 return CheckEliminateAllWin(playerId);
                 
+            case WinCondition.MoneyThreshold: // NEW: Support for MoneyThreshold
+                return CheckMoneyThresholdWin(playerId);
+                
             default:
+                Debug.LogWarning($"[HybridGameManager] Unknown win condition: {activeRules.winCondition}");
                 return false;
         }
     }
 
     private bool CheckReachGoalWin(int playerId)
     {
-        // Check if player reached goal position
+        // Check if player reached goal position (last tile)
         int goalPosition = boardModule != null ? boardModule.GetGoalPosition() : activeRules.tilesPerSide - 1;
         return players[playerId].position >= goalPosition;
+    }
+
+    /// <summary>
+    /// NEW: Check if player reached specific target tile
+    /// </summary>
+    private bool CheckReachSpecificTileWin(int playerId)
+    {
+        // Check if player reached the target tile number
+        int targetTile = activeRules.targetTileNumber;
+        bool hasWon = players[playerId].position >= targetTile;
+        
+        if (hasWon)
+        {
+            Debug.Log($"[HybridGameManager] Player {playerId} reached target tile {targetTile} (position: {players[playerId].position})");
+        }
+        
+        return hasWon;
     }
 
     private bool CheckLastPlayerStandingWin(int playerId)
@@ -394,6 +418,29 @@ public class HybridGameManager : NetworkBehaviour
             return combatModule.HasPlayerWon(playerId, players);
         }
         return false;
+    }
+
+    /// <summary>
+    /// NEW: Check if player reached money threshold
+    /// </summary>
+    private bool CheckMoneyThresholdWin(int playerId)
+    {
+        // Check if player reached winning money threshold
+        if (currencyModule == null || !activeRules.enableCurrency)
+        {
+            Debug.LogWarning("[HybridGameManager] MoneyThreshold win condition requires currency to be enabled!");
+            return false;
+        }
+        
+        int threshold = activeRules.winningMoneyThreshold;
+        bool hasWon = players[playerId].money >= threshold;
+        
+        if (hasWon)
+        {
+            Debug.Log($"[HybridGameManager] Player {playerId} reached money threshold ${threshold} (current: ${players[playerId].money})");
+        }
+        
+        return hasWon;
     }
 
     #endregion

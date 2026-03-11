@@ -3,8 +3,9 @@ using Unity.Netcode;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Spawns appropriate game managers based on analyzed custom rules.
-/// This is the bridge between rule configuration and actual gameplay.
+/// Spawns game managers based on game type.
+/// Standard games (Monopoly, Battleships, Dice Race) spawn their dedicated managers.
+/// Custom/Hybrid games use HybridGameManager with modular rules.
 /// </summary>
 public class CustomGameSpawner : MonoBehaviour
 {
@@ -47,13 +48,20 @@ public class CustomGameSpawner : MonoBehaviour
     #region Game Spawning
 
     /// <summary>
-    /// Analyze rules and spawn the appropriate game manager
+    /// Spawn game from SavedGameInfo (uses explicit game type - no analysis needed)
+    /// This is the PRIMARY method for spawning games.
     /// </summary>
-    public async Task<bool> SpawnGameFromRules(GameRules rules, int playerCount)
+    public async Task<bool> SpawnGame(SavedGameInfo gameInfo, int playerCount)
     {
-        if (rules == null)
+        if (gameInfo == null)
         {
-            Debug.LogError("[CustomGameSpawner] Rules are null!");
+            Debug.LogError("[CustomGameSpawner] GameInfo is null!");
+            return false;
+        }
+
+        if (gameInfo.rules == null)
+        {
+            Debug.LogError("[CustomGameSpawner] GameInfo.rules is null!");
             return false;
         }
 
@@ -63,52 +71,85 @@ public class CustomGameSpawner : MonoBehaviour
             return false;
         }
 
-        // Analyze rules to detect game type
-        CustomGameAnalyzer.DetectedGameType gameType = CustomGameAnalyzer.Instance.AnalyzeGameRules(rules);
-        
-        Debug.Log($"[CustomGameSpawner] Spawning game for detected type: {gameType}");
+        Debug.Log($"[CustomGameSpawner] Spawning game: {gameInfo.gameName} (Type: {gameInfo.gameType})");
 
-        // Validate rules compatibility
-        if (!CustomGameAnalyzer.Instance.AreRulesCompatible(rules, gameType))
+        // Spawn based on explicit game type - no analyzer needed
+        bool success = gameInfo.gameType switch
         {
-            Debug.LogError($"[CustomGameSpawner] Rules are not compatible with {gameType}!");
-            return false;
-        }
-
-        // Spawn appropriate game manager
-        bool success = false;
-        switch (gameType)
-        {
-            case CustomGameAnalyzer.DetectedGameType.Monopoly:
-                success = await SpawnMonopolyGame(rules, playerCount);
-                break;
-            case CustomGameAnalyzer.DetectedGameType.Battleships:
-                success = await SpawnBattleshipsGame(rules, playerCount);
-                break;
-            case CustomGameAnalyzer.DetectedGameType.DiceRace:
-                success = await SpawnDiceRaceGame(rules, playerCount);
-                break;
-            case CustomGameAnalyzer.DetectedGameType.Hybrid:
-                success = await SpawnHybridGame(rules, playerCount);
-                break;
-            default:
-                Debug.LogError($"[CustomGameSpawner] Unknown game type: {gameType}");
-                break;
-        }
+            1 => await SpawnMonopolyGame(gameInfo.rules, playerCount),
+            2 => await SpawnBattleshipsGame(gameInfo.rules, playerCount),
+            3 => await SpawnDiceRaceGame(gameInfo.rules, playerCount),
+            _ => await SpawnHybridGame(gameInfo.rules, playerCount) // All custom/hybrid/unknown games
+        };
 
         if (success)
         {
-            Debug.Log($"[CustomGameSpawner] Successfully spawned {gameType} game");
-            
-            // Apply rules to the spawned game manager
-            ApplyRulesToGame(rules);
+            Debug.Log($"[CustomGameSpawner] Successfully spawned {gameInfo.gameType} game");
+            ApplyRulesToGame(gameInfo.rules);
         }
         else
         {
-            Debug.LogError($"[CustomGameSpawner] Failed to spawn {gameType} game");
+            Debug.LogError($"[CustomGameSpawner] Failed to spawn {gameInfo.gameType} game");
         }
 
         return success;
+    }
+
+    /// <summary>
+    /// Spawn game from rules with explicit game type int.
+    /// Use this when you have rules but not a full SavedGameInfo.
+    /// </summary>
+    public async Task<bool> SpawnGame(GameRules rules, int playerCount, int gameType)
+    {
+        if (rules == null)
+        {
+            Debug.LogError("[CustomGameSpawner] Rules are null!");
+            return false;
+        }
+
+        // Create temporary SavedGameInfo to use primary spawn method
+        var tempGameInfo = new SavedGameInfo(
+            gameName: GetGameTypeName(gameType),
+            gameType: gameType,
+            playerCount: playerCount,
+            rules: rules,
+            isStandardGame: false
+        );
+
+        return await SpawnGame(tempGameInfo, playerCount);
+    }
+
+    /// <summary>
+    /// Get display name for game type int
+    /// </summary>
+    private string GetGameTypeName(int gameType)
+    {
+        return gameType switch
+        {
+            1 => "Monopoly",
+            2 => "Battleships",
+            3 => "Dice Race",
+            4 => "Hybrid",
+            _ => "Unknown"
+        };
+    }
+
+    /// <summary>
+    /// [DEPRECATED] Spawn game from rules only - defaults to Hybrid for unknown types.
+    /// Prefer SpawnGame(SavedGameInfo, int) or SpawnGame(GameRules, int, int) instead.
+    /// </summary>
+    public async Task<bool> SpawnGameFromRules(GameRules rules, int playerCount)
+    {
+        Debug.LogWarning("[CustomGameSpawner] SpawnGameFromRules is deprecated. Use SpawnGame with explicit game type.");
+        
+        if (rules == null)
+        {
+            Debug.LogError("[CustomGameSpawner] Rules are null!");
+            return false;
+        }
+
+        // Without explicit type, default to Hybrid (4) as safest option
+        return await SpawnGame(rules, playerCount, 4); // 4 = Hybrid
     }
 
     #endregion
@@ -122,10 +163,21 @@ public class CustomGameSpawner : MonoBehaviour
     {
         Debug.Log("[CustomGameSpawner] Spawning Monopoly game...");
 
+        // Verify we're the host before proceeding
+        if (!NetworkManager.Instance.IsHost())
+        {
+            Debug.LogError("[CustomGameSpawner] Only the host can spawn Monopoly games!");
+            return false;
+        }
+
         // Configure board first
         if (MonopolyBoardManager.Instance != null)
         {
             MonopolyBoardManager.Instance.ConfigureGame(playerCount);
+        }
+        else
+        {
+            Debug.LogWarning("[CustomGameSpawner] MonopolyBoardManager.Instance is null - board won't be configured");
         }
 
         // Spawn MonopolyGameManager
@@ -135,25 +187,43 @@ public class CustomGameSpawner : MonoBehaviour
             return false;
         }
 
-        // Wait for spawn
+        // Wait for network spawn to complete
         await Task.Delay(500);
+        
+        // Wait a bit more and verify the instance is ready
+        int maxRetries = 10;
+        MonopolyGameManager gameManager = null;
+        
+        for (int i = 0; i < maxRetries; i++)
+        {
+            gameManager = MonopolyGameManager.Instance;
+            if (gameManager != null && gameManager.IsSpawned)
+            {
+                Debug.Log($"[CustomGameSpawner] MonopolyGameManager ready after {i + 1} attempts");
+                break;
+            }
+            await Task.Delay(100);
+        }
 
         // Initialize game
-        if (MonopolyGameManager.Instance != null)
+        if (gameManager != null && gameManager.IsSpawned)
         {
-            MonopolyGameManager.Instance.InitializeGame(playerCount);
+            Debug.Log($"[CustomGameSpawner] Initializing Monopoly game with {playerCount} players");
+            gameManager.InitializeGame(playerCount);
             
             // Apply custom starting money if different from default
             if (rules.startingMoney != 1500)
             {
-                // You would need to add a method to set starting money in MonopolyGameManager
                 Debug.Log($"[CustomGameSpawner] Custom starting money: ${rules.startingMoney}");
             }
             
             return true;
         }
-
-        return false;
+        else
+        {
+            Debug.LogError("[CustomGameSpawner] MonopolyGameManager not ready after waiting!");
+            return false;
+        }
     }
 
     /// <summary>
@@ -163,9 +233,34 @@ public class CustomGameSpawner : MonoBehaviour
     {
         Debug.Log("[CustomGameSpawner] Spawning Battleships game...");
 
-        // Get board configuration
-        int boardSize = CustomGameAnalyzer.Instance.GetRecommendedBoardSize(
-            CustomGameAnalyzer.DetectedGameType.Battleships, rules);
+        // Get board dimensions from BattleshipsSetupManager if available
+        int boardRows = 10;
+        int boardCols = 10;
+        bool[,] customTileStates = null;
+        
+        if (BattleshipsSetupManager.Instance != null)
+        {
+            boardRows = BattleshipsSetupManager.Instance.GetMaxRows();
+            boardCols = BattleshipsSetupManager.Instance.GetMaxColumns();
+            
+            // Get custom tile states if the grid was customized
+            if (BattleshipsSetupManager.Instance.IsCustomized())
+            {
+                customTileStates = BattleshipsSetupManager.Instance.GetTileStates();
+                Debug.Log($"[CustomGameSpawner] Using custom board layout: {boardRows}x{boardCols} with {CountActiveTiles(customTileStates)} active tiles");
+            }
+            else
+            {
+                Debug.Log($"[CustomGameSpawner] Using default board: {boardRows}x{boardCols}");
+            }
+        }
+        else
+        {
+            // Fallback to rules if setup manager not available
+            boardRows = Mathf.Max(rules.tilesPerSide, 10);
+            boardCols = boardRows;
+            Debug.Log($"[CustomGameSpawner] BattleshipsSetupManager not found, using rules: {boardRows}x{boardCols}");
+        }
 
         // Spawn BattleshipsGameManager
         if (!TrySpawnNetworkPrefab<BattleshipsGameManager>())
@@ -177,10 +272,28 @@ public class CustomGameSpawner : MonoBehaviour
         // Wait for spawn
         await Task.Delay(500);
 
-        // Initialize game with custom board size
+        // Initialize game with proper configuration
         if (BattleshipsGameManager.Instance != null)
         {
-            BattleshipsGameManager.Instance.InitializeGameWithDefaultBoard(playerCount, boardSize, boardSize);
+            if (customTileStates != null)
+            {
+                // Use custom board with disabled tiles
+                BattleshipsGameManager.Instance.InitializeGame(playerCount, boardRows, boardCols, customTileStates);
+                Debug.Log($"[CustomGameSpawner] Initialized Battleships with custom board: {boardRows}x{boardCols}");
+            }
+            else
+            {
+                // Use default board (all tiles active)
+                BattleshipsGameManager.Instance.InitializeGameWithDefaultBoard(playerCount, boardRows, boardCols);
+                Debug.Log($"[CustomGameSpawner] Initialized Battleships with default board: {boardRows}x{boardCols}");
+            }
+            
+            // Clear the grid state after initialization
+            if (BattleshipsSetupManager.Instance != null)
+            {
+                BattleshipsSetupManager.Instance.ClearGridState();
+            }
+            
             return true;
         }
 
@@ -194,9 +307,8 @@ public class CustomGameSpawner : MonoBehaviour
     {
         Debug.Log("[CustomGameSpawner] Spawning Dice Race game...");
 
-        // Get board configuration
-        int tileCount = CustomGameAnalyzer.Instance.GetRecommendedBoardSize(
-            CustomGameAnalyzer.DetectedGameType.DiceRace, rules);
+        // Get tile count from rules (clamp to reasonable range)
+        int tileCount = Mathf.Clamp(rules.tilesPerSide, 10, 100);
 
         // Configure and generate board
         if (GameSetupManager.Instance != null)
@@ -231,7 +343,7 @@ public class CustomGameSpawner : MonoBehaviour
     private async Task<bool> SpawnHybridGame(GameRules rules, int playerCount)
     {
         Debug.Log("[CustomGameSpawner] Spawning Hybrid game...");
-        Debug.Log("[CustomGameSpawner] Using TRUE hybrid system with modular game manager");
+        Debug.Log("[CustomGameSpawner] Using modular HybridGameManager for custom rules");
 
         // Spawn HybridGameManager
         if (!TrySpawnNetworkPrefab<HybridGameManager>())
@@ -355,7 +467,28 @@ public class CustomGameSpawner : MonoBehaviour
         }
 
         GameRules rules = RuleEditorManager.Instance.GetCurrentRules();
-        return await SpawnGameFromRules(rules, playerCount);
+        
+        // Get current game info if available, otherwise use Hybrid
+        SavedGameInfo currentGame = RuleEditorManager.Instance.GetCurrentGameInfo();
+        if (currentGame != null)
+        {
+            return await SpawnGame(currentGame, playerCount);
+        }
+        
+        // Fallback to Hybrid (4) if no game info
+        return await SpawnGame(rules, playerCount, 4); // 4 = Hybrid
+    }
+
+    /// <summary>
+    /// Check if a SavedGameInfo can spawn a valid game
+    /// </summary>
+    public bool CanSpawnGame(SavedGameInfo gameInfo)
+    {
+        if (gameInfo == null || gameInfo.rules == null) return false;
+
+        // Validate rules
+        string errorMessage;
+        return gameInfo.rules.ValidateRules(out errorMessage);
     }
 
     /// <summary>
@@ -365,8 +498,8 @@ public class CustomGameSpawner : MonoBehaviour
     {
         if (rules == null) return false;
 
-        CustomGameAnalyzer.DetectedGameType gameType = CustomGameAnalyzer.Instance.AnalyzeGameRules(rules);
-        return CustomGameAnalyzer.Instance.AreRulesCompatible(rules, gameType);
+        string errorMessage;
+        return rules.ValidateRules(out errorMessage);
     }
 
     #endregion
@@ -387,4 +520,22 @@ public class CustomGameSpawner : MonoBehaviour
     }
 
     #endregion
+
+    /// <summary>
+    /// Count active tiles in a tile states array
+    /// </summary>
+    private int CountActiveTiles(bool[,] tileStates)
+    {
+        if (tileStates == null) return 0;
+        
+        int count = 0;
+        for (int r = 0; r < tileStates.GetLength(0); r++)
+        {
+            for (int c = 0; c < tileStates.GetLength(1); c++)
+            {
+                if (tileStates[r, c]) count++;
+            }
+        }
+        return count;
+    }
 }

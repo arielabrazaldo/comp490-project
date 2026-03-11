@@ -5,12 +5,9 @@ using System.Linq;
 using System;
 
 /// <summary>
-/// OBSOLETE: Use HybridGameManager with GameRules.CreateBattleshipsRules() instead.
-/// This manager is deprecated and will be removed in a future update.
-/// All Battleships games should now route through HybridGameManager + Modules.
-/// See STANDARD_GAME_LIBRARY_IMPLEMENTATION.md for migration guide.
+/// Manages the Battleships game logic including ship placement, combat, and game state.
+/// This is the primary game manager for Battleships games.
 /// </summary>
-[Obsolete("Use HybridGameManager with GameRules.CreateBattleshipsRules() and CustomGameSpawner instead.")]
 public class BattleshipsGameManager : NetworkBehaviour
 {
     private static BattleshipsGameManager instance;
@@ -346,20 +343,16 @@ public class BattleshipsGameManager : NetworkBehaviour
             Debug.Log("Game entering PlacingShips state - showing game panel on all clients");
             
             // Add delay on clients to ensure board configuration is received
-            if (!IsServer && UIManager.Instance != null)
+            if (!IsServer)
             {
                 Debug.Log("[Client] Waiting for board configuration before showing UI...");
                 // Increased delay to 1.0 second to ensure RPC is received
                 StartCoroutine(ShowGamePanelAfterDelay(1.0f));
             }
-            else if (UIManager.Instance != null)
-            {
-                // Host can show immediately
-                UIManager.Instance.OnNetworkGameStarted();
-            }
+            // Note: Host UI is handled by BattleshipsUIManager.OnGameStateChanged below
         }
         
-        // Notify UI
+        // Notify Battleships UI (this handles both host and clients)
         if (BattleshipsUIManager.Instance != null)
         {
             BattleshipsUIManager.Instance.OnGameStateChanged(newState);
@@ -380,10 +373,11 @@ public class BattleshipsGameManager : NetworkBehaviour
             yield return new WaitForSeconds(0.5f); // Wait another half second
         }
         
-        if (UIManager.Instance != null)
+        // Notify BattleshipsUIManager to show ship placement panel
+        if (BattleshipsUIManager.Instance != null)
         {
-            Debug.Log($"[Client] Board configuration ready ({activeTiles.Count} tiles) - showing game panel now");
-            UIManager.Instance.OnNetworkGameStarted();
+            Debug.Log($"[Client] Board configuration ready ({activeTiles.Count} tiles) - showing ship placement panel");
+            BattleshipsUIManager.Instance.OnGameStateChanged(GameState.PlacingShips);
         }
     }
 

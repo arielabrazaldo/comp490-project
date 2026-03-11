@@ -53,6 +53,11 @@ public class GameSetupManager : MonoBehaviour
         if (instance == null)
         {
             instance = this;
+            // FIXED: Make root GameObject before DontDestroyOnLoad
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
         }
         else
@@ -64,6 +69,13 @@ public class GameSetupManager : MonoBehaviour
     private void Start()
     {
         ValidateReferences();
+        
+        // Try to auto-fix missing player token prefabs
+        if (playerTokenPrefabs == null || playerTokenPrefabs.Length == 0)
+        {
+            Debug.LogWarning("[GameSetupManager] No player token prefabs assigned! Attempting auto-create...");
+            AutoCreateDefaultPlayerTokens();
+        }
         
         // Hide the board initially
         if (tileParent != null)
@@ -77,9 +89,45 @@ public class GameSetupManager : MonoBehaviour
         if (tilePrefab == null) Debug.LogError("TilePrefab is not assigned in GameSetupManager!");
         if (tileParent == null) Debug.LogError("TileParent is not assigned in GameSetupManager!");
         if (playerTokenPrefabs == null || playerTokenPrefabs.Length == 0) 
-            Debug.LogError("PlayerTokenPrefabs are not assigned in GameSetupManager!");
+            Debug.LogWarning("PlayerTokenPrefabs are not assigned in GameSetupManager! Will attempt auto-create.");
         if (tileColors == null || tileColors.Length == 0) 
-            Debug.LogError("TileColors are not assigned in GameSetupManager!");
+            Debug.LogWarning("TileColors are not assigned in GameSetupManager! Using defaults.");
+    }
+
+    /// <summary>
+    /// Auto-create default player token prefabs if missing
+    /// </summary>
+    private void AutoCreateDefaultPlayerTokens()
+    {
+        // Create simple colored circle tokens
+        playerTokenPrefabs = new GameObject[4];
+        
+        Color[] colors = { Color.red, Color.blue, Color.yellow, Color.green };
+        string[] names = { "Red", "Blue", "Yellow", "Green" };
+        
+        for (int i = 0; i < 4; i++)
+        {
+            // Create token GameObject
+            GameObject token = new GameObject($"{names[i]}PlayerToken");
+            
+            // Add UI Image component (for 2D UI)
+            UnityEngine.UI.Image img = token.AddComponent<UnityEngine.UI.Image>();
+            img.color = colors[i];
+            
+            // Set as circle
+            RectTransform rt = token.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(30, 30);
+            
+            // Store the GameObject directly (not as prefab)
+            playerTokenPrefabs[i] = token;
+            
+            // Hide it for now
+            token.SetActive(false);
+            
+            Debug.Log($"[GameSetupManager] Created default {names[i]} player token");
+        }
+        
+        Debug.Log("[GameSetupManager] ? Created 4 default player tokens");
     }
 
     /// <summary>
@@ -103,13 +151,40 @@ public class GameSetupManager : MonoBehaviour
     /// </summary>
     public void GenerateBoard()
     {
-        if (tilePrefab == null || tileParent == null)
+        Debug.Log($"[GameSetupManager] Generating board with {configuredTileCount} tiles for {configuredPlayerCount} players");
+
+        // VALIDATE BEFORE PROCEEDING
+        if (tilePrefab == null)
         {
-            Debug.LogError("Cannot generate board: Missing tile prefab or parent!");
+            Debug.LogError("[GameSetupManager] Cannot generate board: Missing tile prefab!");
             return;
         }
 
-        Debug.Log($"Generating board with {configuredTileCount} tiles for {configuredPlayerCount} players");
+        if (tileParent == null)
+        {
+            Debug.LogError("[GameSetupManager] Cannot generate board: Missing tile parent!");
+            return;
+        }
+
+        if (playerTokenPrefabs == null || playerTokenPrefabs.Length == 0)
+        {
+            Debug.LogError("[GameSetupManager] Cannot generate board: No player token prefabs!");
+            Debug.LogError("[GameSetupManager] Please assign player token prefabs in the Inspector or they will be auto-created.");
+            // Try one more time to auto-create
+            AutoCreateDefaultPlayerTokens();
+            
+            if (playerTokenPrefabs == null || playerTokenPrefabs.Length == 0)
+            {
+                Debug.LogError("[GameSetupManager] Failed to auto-create player tokens!");
+                return;
+            }
+        }
+
+        if (playerTokenPrefabs.Length < configuredPlayerCount)
+        {
+            Debug.LogError($"[GameSetupManager] Not enough player token prefabs! Need {configuredPlayerCount}, have {playerTokenPrefabs.Length}");
+            return;
+        }
 
         // Clear existing board first
         ClearBoard();
@@ -337,8 +412,8 @@ public class GameSetupManager : MonoBehaviour
     {
         Vector3 startPosition = playerToken.transform.position;
         
-        // Move to target tile
-        playerToken.transform.SetParent(targetTile.transform);
+        // NOTE: Do NOT use SetParent - it causes SpawnStateException with NetworkObjects
+        // Just move the token position directly without changing hierarchy
         
         Vector3 targetPosition = targetTile.transform.position;
         float animationTime = 0.5f;
@@ -361,8 +436,11 @@ public class GameSetupManager : MonoBehaviour
         // Ensure final position is exact
         playerToken.transform.position = targetPosition;
         
-        // Reposition tokens on the tile to avoid overlap
-        RepositionTokensOnTile(targetTile);
+        // Update player positions array
+        if (playerPositions != null && playerId >= 0 && playerId < playerPositions.Length)
+        {
+            playerPositions[playerId] = tilePosition;
+        }
         
         Debug.Log($"Player {playerId + 1} animation complete - now at tile {tilePosition}");
     }

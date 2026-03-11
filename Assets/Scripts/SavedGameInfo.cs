@@ -2,15 +2,18 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Represents a saved game configuration that can be loaded and hosted.
-/// Used for both standard games (Monopoly, Battleships, Dice Race)
-/// and custom user-created games.
+/// Game Type Constants:
+/// 0 = Unknown
+/// 1 = Monopoly
+/// 2 = Battleships
+/// 3 = Dice Race
+/// 4 = Hybrid/Custom
 /// </summary>
 [Serializable]
 public class SavedGameInfo
 {
     public string gameName;
-    public string gameType;
+    public int gameType;  // 1=Monopoly, 2=Battleships, 3=DiceRace, 4=Hybrid
     public int playerCount;
     public GameRules rules;
     public bool isStandardGame; // True for built-in games, false for custom games
@@ -18,9 +21,9 @@ public class SavedGameInfo
     public DateTime lastModifiedDate;
 
     /// <summary>
-    /// Constructor for standard games
+    /// Constructor for games
     /// </summary>
-    public SavedGameInfo(string gameName, string gameType, int playerCount, GameRules rules, bool isStandardGame = false)
+    public SavedGameInfo(string gameName, int gameType, int playerCount, GameRules rules, bool isStandardGame = false)
     {
         this.gameName = gameName;
         this.gameType = gameType;
@@ -32,18 +35,34 @@ public class SavedGameInfo
     }
 
     /// <summary>
+    /// Get display name for the game type
+    /// </summary>
+    public string GetGameTypeName()
+    {
+        return gameType switch
+        {
+            1 => "Monopoly",
+            2 => "Battleships",
+            3 => "Dice Race",
+            4 => "Hybrid",
+            _ => "Unknown"
+        };
+    }
+
+    /// <summary>
     /// Get a display-friendly description of the game
     /// </summary>
     public string GetDescription()
     {
+        string typeName = GetGameTypeName();
         if (isStandardGame)
         {
-            return $"Standard {gameType} • {playerCount} Players";
+            return $"Standard {typeName} ï¿½ {playerCount} Players";
         }
         else
         {
-            return $"Custom {gameType} • {playerCount} Players \n" +
-                $"Modified {lastModifiedDate:MMM dd}";
+            return $"Custom {gameType} ï¿½ {playerCount} Players \n" +
+            $"Modified {lastModifiedDate:MMM dd}";
         }
     }
 

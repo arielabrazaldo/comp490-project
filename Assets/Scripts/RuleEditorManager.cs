@@ -24,6 +24,11 @@ public class RuleEditorManager : NetworkBehaviour
     [Header("Current Rules")]
     [SerializeField] private GameRules currentRules;
     
+    /// <summary>
+    /// The current game info (includes game type, name, and rules)
+    /// </summary>
+    private SavedGameInfo currentGameInfo;
+    
     [Header("Network Sync")]
     private NetworkVariable<bool> networkEnableCurrency = new NetworkVariable<bool>(true);
     private NetworkVariable<int> networkStartingMoney = new NetworkVariable<int>(1500);
@@ -147,6 +152,27 @@ public class RuleEditorManager : NetworkBehaviour
     public GameRules GetCurrentRules()
     {
         return currentRules.Clone();
+    }
+    
+    /// <summary>
+    /// Gets the current game info (if set)
+    /// </summary>
+    public SavedGameInfo GetCurrentGameInfo()
+    {
+        return currentGameInfo;
+    }
+    
+    /// <summary>
+    /// Sets the current game info (called when hosting a saved game)
+    /// </summary>
+    public void SetCurrentGameInfo(SavedGameInfo gameInfo)
+    {
+        currentGameInfo = gameInfo;
+        if (gameInfo?.rules != null)
+        {
+            SetRules(gameInfo.rules);
+        }
+        Debug.Log($"[RuleEditorManager] Set current game info: {gameInfo?.gameName} ({gameInfo?.gameType})");
     }
     
     /// <summary>
@@ -414,3 +440,6 @@ public class RuleEditorManager : NetworkBehaviour
 
     #endregion
 }
+
+
+

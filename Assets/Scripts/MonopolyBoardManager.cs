@@ -14,10 +14,11 @@ public class MonopolyBoardManager : MonoBehaviour
             if (instance == null)
             {
                 instance = FindFirstObjectByType<MonopolyBoardManager>();
+                
+                // DON'T auto-create! The manager must exist in the scene with prefabs assigned
                 if (instance == null)
                 {
-                    GameObject go = new GameObject("MonopolyBoardManager");
-                    instance = go.AddComponent<MonopolyBoardManager>();
+                    Debug.LogError("[MonopolyBoardManager] Instance not found in scene! Please add MonopolyBoardManager to your scene with prefabs assigned.");
                 }
             }
             return instance;
@@ -55,13 +56,28 @@ public class MonopolyBoardManager : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Log($"[MonopolyBoardManager] Awake called on {gameObject.name}");
+        
         if (instance == null)
         {
             instance = this;
+            
+            // CRITICAL: DontDestroyOnLoad only works on ROOT GameObjects
+            // If this object has a parent, we need to either:
+            // 1. Detach from parent, or
+            // 2. Skip DontDestroyOnLoad (manager references UI which will be destroyed anyway)
+            if (transform.parent != null)
+            {
+                Debug.Log($"[MonopolyBoardManager] Has parent ({transform.parent.name}), detaching for DontDestroyOnLoad");
+                transform.SetParent(null);
+            }
+            
             DontDestroyOnLoad(gameObject);
+            Debug.Log($"[MonopolyBoardManager] Instance set to {gameObject.name}, prefabs assigned: Property={(propertyTilePrefab != null)}, Special={(specialTilePrefab != null)}, Board={(boardParent != null)}");
         }
-        else
+        else if (instance != this)
         {
+            Debug.LogWarning($"[MonopolyBoardManager] Duplicate found! Destroying {gameObject.name}, keeping {instance.gameObject.name}");
             Destroy(gameObject);
         }
     }
@@ -87,16 +103,23 @@ public class MonopolyBoardManager : MonoBehaviour
         MonopolyGameManager.OnHousePurchased -= OnHousePurchased;
         MonopolyGameManager.OnHotelPurchased -= OnHotelPurchased;
         
+        // Clear static instance if this is the one being destroyed
+        if (instance == this)
+        {
+            instance = null;
+            Debug.Log("[MonopolyBoardManager] Instance cleared on destroy");
+        }
+        
         ClearBoard();
     }
 
     private void ValidateReferences()
     {
-        if (propertyTilePrefab == null) Debug.LogError("PropertyTilePrefab is not assigned in MonopolyBoardManager!");
-        if (specialTilePrefab == null) Debug.LogError("SpecialTilePrefab is not assigned in MonopolyBoardManager!");
-        if (boardParent == null) Debug.LogError("BoardParent is not assigned in MonopolyBoardManager!");
+        if (propertyTilePrefab == null) Debug.LogError("[MonopolyBoardManager] PropertyTilePrefab is not assigned!");
+        if (specialTilePrefab == null) Debug.LogError("[MonopolyBoardManager] SpecialTilePrefab is not assigned!");
+        if (boardParent == null) Debug.LogError("[MonopolyBoardManager] BoardParent is not assigned!");
         if (playerTokenPrefabs == null || playerTokenPrefabs.Length == 0) 
-            Debug.LogError("PlayerTokenPrefabs are not assigned in MonopolyBoardManager!");
+            Debug.LogError("[MonopolyBoardManager] PlayerTokenPrefabs are not assigned!");
     }
 
     /// <summary>
