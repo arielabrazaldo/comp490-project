@@ -57,11 +57,11 @@ public class SavedGameInfo
         string typeName = GetGameTypeName();
         if (isStandardGame)
         {
-            return $"Standard {typeName} � {playerCount} Players";
+            return $"Standard {typeName} • {playerCount} Players";
         }
         else
         {
-            return $"Custom {gameType} � {playerCount} Players \n" +
+            return $"Custom {gameType} • {playerCount} Players \n" +
             $"Modified {lastModifiedDate:MMM dd}";
         }
     }
