@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// UI component for the Rule Editor.
@@ -67,6 +68,27 @@ public class RuleEditorUI : MonoBehaviour
     [SerializeField] private Button battleshipsPresetButton;
     [SerializeField] private Button customPresetButton;
     
+    [Header("Custom Game Selection")]
+    [SerializeField] private GameObject overlayPanel; // Parent panel for selection, naming, and confirmation panels
+    [SerializeField] private GameObject customGameSelectionPanel; // Panel containing scroll view and action buttons
+    [SerializeField] private GameObject namingPanel; // Panel for naming a new custom game
+    [SerializeField] private TMP_InputField gameNameInput; // Input field for game name
+    [SerializeField] private Button confirmNameButton; // Confirm name and save
+    [SerializeField] private Button cancelNameButton; // Cancel naming and go back
+    [SerializeField] private Transform customGamesListContent; // ScrollView content for custom games list
+    [SerializeField] private GameObject customGameItemPrefab; // Prefab for custom game list item (reuse savedGameItemPrefab)
+    [SerializeField] private Button backFromSelectionButton; // Back to rule editor
+    [SerializeField] private Button overwriteGameButton; // Overwrite existing game JSON
+    [SerializeField] private Button newGameFromTemplateButton; // Create new game using selected as template
+    [SerializeField] private TextMeshProUGUI selectedGameInfoText; // Shows info about selected game
+    [SerializeField] private TextMeshProUGUI noCustomGamesText; // Shows when no custom games exist
+    
+    [Header("Confirmation Panel")]
+    [SerializeField] private GameObject confirmationPanel; // Panel shown after saving
+    [SerializeField] private TextMeshProUGUI confirmationText; // Text showing save confirmation message
+    [SerializeField] private Button returnToMenuButton; // Return to main menu
+    [SerializeField] private Button continueEditingButton; // Continue editing (resets to defaults)
+    
     [Header("Action Buttons")]
     [SerializeField] private Button applyButton;
     [SerializeField] private Button resetButton;
@@ -77,6 +99,12 @@ public class RuleEditorUI : MonoBehaviour
     
     private GameRules currentRules;
     private bool isInitializing = false;
+    
+    // Custom game selection state
+    private List<SavedGameInfo> customGamesList = new List<SavedGameInfo>();
+    private SavedGameInfo selectedCustomGame = null;
+    private bool isEditingExistingGame = false; // True when editing an existing custom game
+    private string selectedGameFilePath = null; // Store file path for overwrite (derived from game name)
 
     private void Awake()
     {
@@ -198,6 +226,30 @@ public class RuleEditorUI : MonoBehaviour
         if (resourceDetailsPanel != null)
         {
             resourceDetailsPanel.SetActive(false);
+        }
+        
+        // Hide overlay panel (contains selection and naming panels)
+        if (overlayPanel != null)
+        {
+            overlayPanel.SetActive(false);
+        }
+        
+        // Hide custom game selection panel
+        if (customGameSelectionPanel != null)
+        {
+            customGameSelectionPanel.SetActive(false);
+        }
+        
+        // Hide naming panel
+        if (namingPanel != null)
+        {
+            namingPanel.SetActive(false);
+        }
+        
+        // Hide confirmation panel
+        if (confirmationPanel != null)
+        {
+            confirmationPanel.SetActive(false);
         }
         
         Debug.Log("[RuleEditorUI] All detail panels hidden (will show dynamically)");
@@ -354,6 +406,46 @@ public class RuleEditorUI : MonoBehaviour
         if (resetButton != null)
         {
             resetButton.onClick.AddListener(ResetToDefaults);
+        }
+        
+        // Custom game selection
+        if (backFromSelectionButton != null)
+        {
+            backFromSelectionButton.onClick.AddListener(OnBackFromSelection);
+        }
+        
+        if (overwriteGameButton != null)
+        {
+            overwriteGameButton.onClick.AddListener(OnOverwriteGame);
+        }
+        
+        if (newGameFromTemplateButton != null)
+        {
+            newGameFromTemplateButton.onClick.AddListener(OnNewGameFromTemplate);
+        }
+
+        // Confirm name button
+        if (confirmNameButton != null)
+        {
+            confirmNameButton.onClick.AddListener(OnConfirmName);
+        }
+        
+        // Cancel name button
+        if (cancelNameButton != null)
+        {
+            cancelNameButton.onClick.AddListener(OnCancelName);
+        }
+        
+        // Return to menu button (from confirmation panel)
+        if (returnToMenuButton != null)
+        {
+            returnToMenuButton.onClick.AddListener(OnReturnToMenu);
+        }
+        
+        // Continue editing button (from confirmation panel)
+        if (continueEditingButton != null)
+        {
+            continueEditingButton.onClick.AddListener(OnContinueEditing);
         }
     }
     
@@ -881,14 +973,394 @@ public class RuleEditorUI : MonoBehaviour
             UpdateStatus($"Max resources per type: {currentRules.maxResourcesPerType}");
         }
     }
+    
+    private void OnBackFromSelection()
+    {
+        if (isInitializing) return;
+        
+        // Hide the overlay panel
+        HideOverlayPanel();
+        
+        // Reset selection state
+        selectedCustomGame = null;
+        isEditingExistingGame = false;
+        
+        UpdateStatus("Returned to rule editor");
+    }
+    
+    private void OnOverwriteGame()
+    {
+        if (isInitializing || selectedCustomGame == null) return;
+        
+        // Load selected game rules into editor
+        currentRules = selectedCustomGame.rules.Clone();
+        isEditingExistingGame = true;
+        
+        // Hide the overlay panel
+        HideOverlayPanel();
 
-    #endregion
-
-    #region Panel Updates (Dynamic Show/Hide)
-
+        // Load rules into UI
+        LoadRulesIntoUI();
+        
+        UpdateStatus($"Editing '{selectedCustomGame.gameName}' - Apply to overwrite");
+    }
+    
+    private void OnNewGameFromTemplate()
+    {
+        if (isInitializing || selectedCustomGame == null) return;
+        
+        // Load selected custom game rules into editor as template
+        currentRules = selectedCustomGame.rules.Clone();
+        isEditingExistingGame = false; // Creating new game, not editing existing
+        selectedCustomGame = null; // Clear selection since we're creating new
+        
+        // Hide the overlay panel
+        HideOverlayPanel();
+        
+        // Load rules into UI
+        LoadRulesIntoUI();
+        
+        UpdateStatus("Loaded template - modify and Apply to create new game");
+    }
+    
     /// <summary>
-    /// DYNAMIC: Show currency panel ONLY when toggle is ON
+    /// Refreshes the custom games scroll view list from disk
     /// </summary>
+    private void RefreshCustomGamesList()
+    {
+        customGamesList.Clear();
+        
+        if (customGamesListContent == null)
+        {
+            Debug.LogWarning("[RuleEditorUI] customGamesListContent is null");
+            return;
+        }
+        
+        // Try to use UIManager_Streamlined's method if available
+        UIManager_Streamlined streamlinedUI = FindFirstObjectByType<UIManager_Streamlined>();
+        if (streamlinedUI != null && customGameItemPrefab != null)
+        {
+            // Use the shared method from UIManager_Streamlined
+            customGamesList = streamlinedUI.PopulateCustomGamesList(
+                customGamesListContent, 
+                customGameItemPrefab, 
+                OnCustomGameItemClicked
+            );
+            
+            Debug.Log($"[RuleEditorUI] Used UIManager_Streamlined to load {customGamesList.Count} custom games");
+        }
+        else
+        {
+            Debug.LogError("[RuleEditorUI] UIManager_Streamlined not found! Cannot populate custom games list.");
+        }
+        
+        // Show/hide the no custom games message
+        bool hasCustomGames = customGamesList.Count > 0;
+        if (noCustomGamesText != null)
+        {
+            noCustomGamesText.gameObject.SetActive(!hasCustomGames);
+            if (!hasCustomGames)
+            {
+                noCustomGamesText.text = "No custom games found.\nCreate a custom game first!";
+            }
+        }
+        
+        // Reset selection state
+        selectedCustomGame = null;
+        if (overwriteGameButton != null) overwriteGameButton.interactable = false;
+        if (newGameFromTemplateButton != null) newGameFromTemplateButton.interactable = false;
+        if (selectedGameInfoText != null) selectedGameInfoText.text = hasCustomGames ? "Select a custom game" : "No game selected";
+        
+        Debug.Log($"[RuleEditorUI] Custom games list refreshed ({customGamesList.Count} games)");
+    }
+    
+    /// <summary>
+    /// Called when a custom game item is clicked in the scroll view
+    /// </summary>
+    private void OnCustomGameItemClicked(SavedGameInfo gameInfo)
+    {
+        if (isInitializing) return;
+        
+        // Update selection
+        selectedCustomGame = gameInfo;
+        selectedGameFilePath = gameInfo.gameName;
+        
+        // Show game details
+        int minPlayers = gameInfo.rules?.minPlayers ?? 2;
+        int maxPlayers = gameInfo.rules?.maxPlayers ?? 4;
+        string description = gameInfo.GetDescription();
+        
+        if (selectedGameInfoText != null)
+        {
+            selectedGameInfoText.text = $"<b>{gameInfo.gameName}</b>\nPlayers: {minPlayers}-{maxPlayers}\n{description}";
+        }
+        
+        // Enable action buttons
+        if (overwriteGameButton != null) overwriteGameButton.interactable = true;
+        if (newGameFromTemplateButton != null) newGameFromTemplateButton.interactable = true;
+        
+        UpdateStatus($"Selected: {gameInfo.gameName}");
+        Debug.Log($"[RuleEditorUI] Selected custom game: {gameInfo.gameName}");
+    }
+    
+    /// <summary>
+    /// Shows the custom game selection panel (called when Custom preset button is clicked)
+    /// </summary>
+    private void ShowCustomGameSelectionPanel()
+    {
+        Debug.Log("[RuleEditorUI] ShowCustomGameSelectionPanel() called");
+        
+        // Show overlay panel first
+        if (overlayPanel != null)
+        {
+            overlayPanel.SetActive(true);
+        }
+        
+        // Hide naming panel (in case it was open)
+        if (namingPanel != null)
+        {
+            namingPanel.SetActive(false);
+        }
+        
+        // Show custom game selection panel
+        if (customGameSelectionPanel != null)
+        {
+            customGameSelectionPanel.SetActive(true);
+            Debug.Log($"[RuleEditorUI] Custom game selection panel activated. ActiveInHierarchy: {customGameSelectionPanel.activeInHierarchy}");
+        }
+        else
+        {
+            Debug.LogError("[RuleEditorUI] customGameSelectionPanel is NULL! Please assign it in the Inspector.");
+        }
+        
+        // Refresh the list
+        RefreshCustomGamesList();
+        
+        UpdateStatus("Select a custom game to load or use as template");
+    }
+    
+    /// <summary>
+    /// Shows the naming panel (called when Apply button is clicked)
+    /// </summary>
+    private void ShowNamingPanel()
+    {
+        Debug.Log("[RuleEditorUI] ShowNamingPanel() called");
+        
+        // Show overlay panel first
+        if (overlayPanel != null)
+        {
+            overlayPanel.SetActive(true);
+            Debug.Log($"[RuleEditorUI] Overlay panel activated. ActiveInHierarchy: {overlayPanel.activeInHierarchy}");
+        }
+        else
+        {
+            Debug.LogError("[RuleEditorUI] overlayPanel is NULL! Please assign it in the Inspector.");
+        }
+        
+        // Hide selection panel (in case it was open)
+        if (customGameSelectionPanel != null)
+        {
+            customGameSelectionPanel.SetActive(false);
+        }
+        
+        // Show naming panel
+        if (namingPanel != null)
+        {
+            namingPanel.SetActive(true);
+            
+            // Only clear the input field if not editing existing game (pre-fill handled in ApplyRules)
+            if (!isEditingExistingGame && gameNameInput != null)
+            {
+                gameNameInput.text = "";
+            }
+            
+            // Focus the input field
+            if (gameNameInput != null)
+            {
+                gameNameInput.Select();
+                gameNameInput.ActivateInputField();
+            }
+            
+            Debug.Log($"[RuleEditorUI] Naming panel activated. ActiveInHierarchy: {namingPanel.activeInHierarchy}");
+        }
+        else
+        {
+            Debug.LogError("[RuleEditorUI] namingPanel is NULL! Please assign it in the Inspector.");
+        }
+        
+        UpdateStatus("Enter a name for your custom game");
+    }
+    
+    /// <summary>
+    /// Shows the confirmation panel (called after saving rules)
+    /// </summary>
+    private void ShowConfirmationPanel(string savedGameName)
+    {
+        Debug.Log("[RuleEditorUI] ShowConfirmationPanel() called");
+        
+        // Show overlay panel first
+        if (overlayPanel != null)
+        {
+            overlayPanel.SetActive(true);
+        }
+        
+        // Hide selection and naming panels
+        if (customGameSelectionPanel != null)
+        {
+            customGameSelectionPanel.SetActive(false);
+        }
+        
+        if (namingPanel != null)
+        {
+            namingPanel.SetActive(false);
+        }
+        
+        // Show confirmation panel
+        if (confirmationPanel != null)
+        {
+            confirmationPanel.SetActive(true);
+            
+            if (confirmationText != null)
+            {
+                string message = isEditingExistingGame 
+                    ? $"'{savedGameName}' updated successfully!" 
+                    : $"'{savedGameName}' created successfully!";
+                confirmationText.text = message;
+            }
+            
+            Debug.Log($"[RuleEditorUI] Confirmation panel activated");
+        }
+        else
+        {
+            Debug.LogError("[RuleEditorUI] confirmationPanel is NULL! Falling back to close.");
+            // Fallback: just close if confirmation panel isn't set up
+            ClosePanel();
+        }
+        
+        // Reset editing state
+        isEditingExistingGame = false;
+        selectedCustomGame = null;
+    }
+    
+    /// <summary>
+    /// Hides the overlay panel and all its children
+    /// </summary>
+    private void HideOverlayPanel()
+    {
+        if (overlayPanel != null)
+        {
+            overlayPanel.SetActive(false);
+        }
+        
+        if (customGameSelectionPanel != null)
+        {
+            customGameSelectionPanel.SetActive(false);
+        }
+        
+        if (namingPanel != null)
+        {
+            namingPanel.SetActive(false);
+        }
+        
+        if (confirmationPanel != null)
+        {
+            confirmationPanel.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// Called when confirm name button is clicked
+    /// </summary>
+    private void OnConfirmName()
+    {
+        if (gameNameInput == null) return;
+        
+        string gameName = gameNameInput.text.Trim();
+        
+        if (string.IsNullOrEmpty(gameName))
+        {
+            UpdateStatus("Error: Please enter a game name");
+            return;
+        }
+        
+        // Don't hide overlay - ApplyRulesWithName will show confirmation panel
+        // Just hide the naming panel
+        if (namingPanel != null)
+        {
+            namingPanel.SetActive(false);
+        }
+        
+        // Now proceed with saving and applying the rules
+        ApplyRulesWithName(gameName);
+    }
+    
+    /// <summary>
+    /// Called when cancel name button is clicked
+    /// </summary>
+    private void OnCancelName()
+    {
+        // Hide the overlay
+        HideOverlayPanel();
+        
+        UpdateStatus("Naming cancelled");
+    }
+    
+    /// <summary>
+    /// Called when return to menu button is clicked (from confirmation panel)
+    /// </summary>
+    private void OnReturnToMenu()
+    {
+        Debug.Log("[RuleEditorUI] Return to menu button clicked");
+        
+        // Hide the overlay
+        HideOverlayPanel();
+        
+        // Close the panel (this will also show the main menu)
+        ClosePanel();
+    }
+    
+    /// <summary>
+    /// Called when continue editing button is clicked (from confirmation panel)
+    /// </summary>
+    private void OnContinueEditing()
+    {
+        Debug.Log("[RuleEditorUI] Continue editing button clicked");
+        
+        // Hide the overlay
+        HideOverlayPanel();
+        
+        // Reset to default state
+        ResetToDefaultState();
+        
+        UpdateStatus("Reset to defaults - ready for new game");
+    }
+    
+    /// <summary>
+    /// Resets the rule editor to its default state (all toggles OFF, no game selected)
+    /// Called when closing the panel or clicking "Continue Editing" after saving
+    /// </summary>
+    private void ResetToDefaultState()
+    {
+        Debug.Log("[RuleEditorUI] Resetting to default state");
+        
+        // Reset editing state
+        isEditingExistingGame = false;
+        selectedCustomGame = null;
+        selectedGameFilePath = null;
+        
+        // Reset to default rules (all toggles OFF)
+        currentRules = CreateDefaultOffRules();
+        
+        // Hide all overlay panels
+        HideOverlayPanel();
+        
+        // Hide all detail panels
+        HideAllDetailPanels();
+        
+        // Reload UI with default values
+        LoadRulesIntoUI();
+    }
+    
     private void UpdateCurrencyPanel()
     {
         if (currencyDetailsPanel != null)
@@ -1039,7 +1511,7 @@ public class RuleEditorUI : MonoBehaviour
             bool shouldShow = currentRules.enableResources;
             resourceDetailsPanel.SetActive(shouldShow);
             
-            Debug.Log($"[RuleEditorUI] Resource panel: {(shouldShow ? "SHOWN" : "HIDDEN")}");
+            Debug.Log($"[RuleEditorUI] Resource panel: {(shouldShow ? "SHown" : "HIDDEN")}");
         }
         
         // Update input field interactability
@@ -1226,6 +1698,8 @@ public class RuleEditorUI : MonoBehaviour
 
     private void ApplyRules()
     {
+        Debug.Log($"[RuleEditorUI] ApplyRules() called. isEditingExistingGame={isEditingExistingGame}, selectedCustomGame={(selectedCustomGame != null ? selectedCustomGame.gameName : "null")}");
+        
         // Validate rules
         if (!currentRules.ValidateRules(out string errorMessage))
         {
@@ -1234,11 +1708,29 @@ public class RuleEditorUI : MonoBehaviour
             return;
         }
         
+        // If editing existing game, apply directly with the existing name (no naming panel)
+        if (isEditingExistingGame && selectedCustomGame != null)
+        {
+            Debug.Log($"[RuleEditorUI] Overwriting existing game: {selectedCustomGame.gameName}");
+            ApplyRulesWithName(selectedCustomGame.gameName);
+        }
+        else
+        {
+            // New game - show naming panel
+            Debug.Log("[RuleEditorUI] Showing naming panel for new game...");
+            ShowNamingPanel();
+        }
+    }
+    
+    /// <summary>
+    /// Apply rules with a specific game name (called after naming or when editing existing game)
+    /// </summary>
+    private void ApplyRulesWithName(string gameName)
+    {
         // Apply to manager
         if (RuleEditorManager.Instance != null)
         {
             RuleEditorManager.Instance.SetRules(currentRules);
-            UpdateStatus("Rules applied successfully!");
         }
         else
         {
@@ -1247,38 +1739,35 @@ public class RuleEditorUI : MonoBehaviour
             return;
         }
 
-        // Close rule editor panel
-        ClosePanel();
-
-        // Show main menu panel or trigger lobby creation
-        // Check for UIManager or UIManager_Streamlined
+        // Save the game via UIManager_Streamlined (but don't close yet)
         UIManager_Streamlined streamlinedUI = FindFirstObjectByType<UIManager_Streamlined>();
         if (streamlinedUI != null)
         {
-            // Call the public OnRulesConfigured method which will:
-            // 1. Save the game
-            // 2. Create lobby
-            // 3. Show lobby panel
-            streamlinedUI.OnRulesConfigured(currentRules);
-            Debug.Log("[RuleEditorUI] Called UIManager_Streamlined.OnRulesConfigured");
+            // Pass isEditingExistingGame to determine whether to overwrite
+            streamlinedUI.OnRulesConfiguredWithoutNavigation(currentRules, gameName, isEditingExistingGame);
+            Debug.Log($"[RuleEditorUI] Called UIManager_Streamlined.OnRulesConfiguredWithoutNavigation with name: {gameName}, overwrite: {isEditingExistingGame}");
         }
         else
         {
-            // Fallback to old UIManager (suppress obsolete warning since this is intentional fallback)
+            // Fallback to old UIManager
             UIManager oldUI = FindFirstObjectByType<UIManager>();
             if (oldUI != null)
             {
                 #pragma warning disable CS0618 // Intentional use of deprecated UIManager for backwards compatibility
                 oldUI.OnRulesConfigured(currentRules);
                 #pragma warning restore CS0618
-                Debug.Log("[RuleEditorUI] Called UIManager.OnRulesConfigured");
+                Debug.Log("[RuleEditorUI] Called UIManager.OnRulesConfigured (fallback)");
             }
             else
             {
-                Debug.LogError("[RuleEditorUI] No UIManager found! Cannot proceed with rule application.");
+                Debug.LogError("[RuleEditorUI] No UIManager found! Cannot save game.");
                 UpdateStatus("Error: No UIManager found!");
+                return;
             }
         }
+        
+        // Show confirmation panel instead of closing
+        ShowConfirmationPanel(gameName);
     }
     
     private void ResetToDefaults()
@@ -1295,21 +1784,21 @@ public class RuleEditorUI : MonoBehaviour
         {
             case RuleEditorManager.RulePreset.Monopoly:
                 currentRules = GameRules.CreateMonopolyRules();
+                LoadRulesIntoUI();
                 UpdateStatus("Loaded Monopoly preset");
                 break;
                 
             case RuleEditorManager.RulePreset.Battleships:
                 currentRules = GameRules.CreateBattleshipsRules();
+                LoadRulesIntoUI();
                 UpdateStatus("Loaded Battleships preset");
                 break;
                 
             case RuleEditorManager.RulePreset.Custom:
-                currentRules = GameRules.CreateCustomRules();
-                UpdateStatus("Loaded Custom preset");
+                // Show custom game selection panel instead of loading default custom rules
+                ShowCustomGameSelectionPanel();
                 break;
         }
-        
-        LoadRulesIntoUI();
     }
     
     private void OnRulesChanged(GameRules newRules)
@@ -1332,6 +1821,12 @@ public class RuleEditorUI : MonoBehaviour
 
     public void ShowPanel()
     {
+        // First hide the custom game selection panel if it's open
+        if (customGameSelectionPanel != null)
+        {
+            customGameSelectionPanel.SetActive(false);
+        }
+        
         if (ruleEditorPanel != null)
         {
             ruleEditorPanel.SetActive(true);
@@ -1342,6 +1837,9 @@ public class RuleEditorUI : MonoBehaviour
     
     public void ClosePanel()
     {
+        // Reset to defaults before closing
+        ResetToDefaultState();
+        
         if (ruleEditorPanel != null)
         {
             ruleEditorPanel.SetActive(false);
@@ -1410,6 +1908,76 @@ public class RuleEditorUI : MonoBehaviour
     {
         HideAllDetailPanels();
         Debug.Log("[RuleEditorUI] Manual panel hiding triggered");
+    }
+    
+    /// <summary>
+    /// Context menu for testing - diagnose custom game selection panel
+    /// </summary>
+    [ContextMenu("Diagnose Custom Game Selection Panel")]
+    public void DiagnoseCustomGameSelectionPanel()
+    {
+        Debug.Log("=== Custom Game Selection Panel Diagnostic ===");
+        
+        if (customGameSelectionPanel == null)
+        {
+            Debug.LogError("[RuleEditorUI] customGameSelectionPanel is NULL - not assigned in Inspector!");
+            return;
+        }
+        
+        Debug.Log($"Panel Name: {customGameSelectionPanel.name}");
+        Debug.Log($"Panel activeSelf: {customGameSelectionPanel.activeSelf}");
+        Debug.Log($"Panel activeInHierarchy: {customGameSelectionPanel.activeInHierarchy}");
+        
+        // Check parent chain
+        Transform current = customGameSelectionPanel.transform;
+        int depth = 0;
+        while (current.parent != null && depth < 10)
+        {
+            current = current.parent;
+            Debug.Log($"  Parent [{depth}]: {current.name} - active: {current.gameObject.activeSelf}");
+            depth++;
+        }
+        
+        // Check RectTransform
+        RectTransform rectTransform = customGameSelectionPanel.GetComponent<RectTransform>();
+        if (rectTransform != null)
+        {
+            Debug.Log($"RectTransform - anchoredPosition: {rectTransform.anchoredPosition}, sizeDelta: {rectTransform.sizeDelta}");
+        }
+        
+        Debug.Log("=== End Diagnostic ===");
+    }
+    
+    /// <summary>
+    /// Context menu for testing - force show custom game selection panel
+    /// </summary>
+    [ContextMenu("Force Show Custom Game Selection Panel")]
+    public void ForceShowCustomGameSelectionPanel()
+    {
+        Debug.Log("[RuleEditorUI] Force showing custom game selection panel");
+        
+        if (customGameSelectionPanel == null)
+        {
+            Debug.LogError("[RuleEditorUI] customGameSelectionPanel is NULL!");
+            return;
+        }
+        
+        // Activate all parents first
+        Transform current = customGameSelectionPanel.transform;
+        while (current.parent != null)
+        {
+            current = current.parent;
+            if (!current.gameObject.activeSelf)
+            {
+                Debug.Log($"[RuleEditorUI] Activating parent: {current.name}");
+                current.gameObject.SetActive(true);
+            }
+        }
+        
+        // Now activate the panel
+        customGameSelectionPanel.SetActive(true);
+        
+        Debug.Log($"[RuleEditorUI] Panel should now be visible. activeInHierarchy: {customGameSelectionPanel.activeInHierarchy}");
     }
 
     #endregion

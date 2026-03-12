@@ -101,21 +101,31 @@ public class GameSaveManager : MonoBehaviour
     /// <summary>
     /// Save a custom game to disk as JSON
     /// </summary>
-    public bool SaveGame(SavedGameInfo gameInfo)
+    /// <param name="gameInfo">The game info to save</param>
+    /// <param name="overwrite">If true, overwrite existing file with same name. If false, add timestamp to make unique.</param>
+    public bool SaveGame(SavedGameInfo gameInfo, bool overwrite = false)
     {
         try
         {
-            // Generate unique filename
+            // Generate filename from game name
             string fileName = GetSafeFileName(gameInfo.gameName);
             string filePath = Path.Combine(saveDirectory, fileName + SAVE_FILE_EXTENSION);
 
             // Check if file already exists
-            if (File.Exists(filePath))
+            if (File.Exists(filePath) && !overwrite)
             {
-                // Add timestamp to make it unique
+                // Add timestamp to make it unique (only if not overwriting)
                 fileName = $"{fileName}_{System.DateTime.Now:yyyyMMdd_HHmmss}";
                 filePath = Path.Combine(saveDirectory, fileName + SAVE_FILE_EXTENSION);
+                Debug.Log($"[GameSaveManager] File exists, creating new file: {fileName}");
             }
+            else if (File.Exists(filePath) && overwrite)
+            {
+                Debug.Log($"[GameSaveManager] Overwriting existing file: {fileName}");
+            }
+
+            // Update last modified date
+            gameInfo.lastModifiedDate = System.DateTime.Now;
 
             // Convert to JSON-serializable format
             SerializableGameData saveData = new SerializableGameData(gameInfo);
@@ -139,14 +149,17 @@ public class GameSaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Save a custom game with a specific filename
+    /// Save a custom game with a specific filename (always overwrites)
     /// </summary>
-    public bool SaveGame(SavedGameInfo gameInfo, string fileName)
+    public bool SaveGameWithFileName(SavedGameInfo gameInfo, string fileName)
     {
         try
         {
             string safeFileName = GetSafeFileName(fileName);
             string filePath = Path.Combine(saveDirectory, safeFileName + SAVE_FILE_EXTENSION);
+
+            // Update last modified date
+            gameInfo.lastModifiedDate = System.DateTime.Now;
 
             SerializableGameData saveData = new SerializableGameData(gameInfo);
             string json = JsonUtility.ToJson(saveData, true);
