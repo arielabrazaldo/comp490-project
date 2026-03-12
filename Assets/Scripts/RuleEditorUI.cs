@@ -82,6 +82,7 @@ public class RuleEditorUI : MonoBehaviour
     [SerializeField] private Button newGameFromTemplateButton; // Create new game using selected as template
     [SerializeField] private TextMeshProUGUI selectedGameInfoText; // Shows info about selected game
     [SerializeField] private TextMeshProUGUI noCustomGamesText; // Shows when no custom games exist
+    [SerializeField] private GameObject backgroundContent; // Hide everything when overlay is open
     
     [Header("Confirmation Panel")]
     [SerializeField] private GameObject confirmationPanel; // Panel shown after saving
@@ -1109,12 +1110,8 @@ public class RuleEditorUI : MonoBehaviour
     private void ShowCustomGameSelectionPanel()
     {
         Debug.Log("[RuleEditorUI] ShowCustomGameSelectionPanel() called");
-        
-        // Show overlay panel first
-        if (overlayPanel != null)
-        {
-            overlayPanel.SetActive(true);
-        }
+
+        SetOverlayVisible(true);
         
         // Hide naming panel (in case it was open)
         if (namingPanel != null)
@@ -1145,18 +1142,14 @@ public class RuleEditorUI : MonoBehaviour
     private void ShowNamingPanel()
     {
         Debug.Log("[RuleEditorUI] ShowNamingPanel() called");
-        
-        // Show overlay panel first
-        if (overlayPanel != null)
-        {
-            overlayPanel.SetActive(true);
-            Debug.Log($"[RuleEditorUI] Overlay panel activated. ActiveInHierarchy: {overlayPanel.activeInHierarchy}");
-        }
-        else
+
+        SetOverlayVisible(true);
+
+        if (overlayPanel == null)
         {
             Debug.LogError("[RuleEditorUI] overlayPanel is NULL! Please assign it in the Inspector.");
         }
-        
+
         // Hide selection panel (in case it was open)
         if (customGameSelectionPanel != null)
         {
@@ -1197,13 +1190,9 @@ public class RuleEditorUI : MonoBehaviour
     private void ShowConfirmationPanel(string savedGameName)
     {
         Debug.Log("[RuleEditorUI] ShowConfirmationPanel() called");
-        
-        // Show overlay panel first
-        if (overlayPanel != null)
-        {
-            overlayPanel.SetActive(true);
-        }
-        
+
+        SetOverlayVisible(true);
+
         // Hide selection and naming panels
         if (customGameSelectionPanel != null)
         {
@@ -1241,16 +1230,24 @@ public class RuleEditorUI : MonoBehaviour
         isEditingExistingGame = false;
         selectedCustomGame = null;
     }
-    
+
+    private void SetOverlayVisible(bool visible)
+    {
+        // Turn overlay on/off
+        if (overlayPanel != null)
+            overlayPanel.SetActive(visible);
+
+        // Hide/show everything behind it
+        if (backgroundContent != null)
+            backgroundContent.SetActive(!visible);
+    }
+
     /// <summary>
     /// Hides the overlay panel and all its children
     /// </summary>
     private void HideOverlayPanel()
     {
-        if (overlayPanel != null)
-        {
-            overlayPanel.SetActive(false);
-        }
+        SetOverlayVisible(false);
         
         if (customGameSelectionPanel != null)
         {
