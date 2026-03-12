@@ -290,12 +290,20 @@ public class BattleshipsGameManager : NetworkBehaviour
         // Subscribe to turn changes
         currentPlayerTurn.OnValueChanged += OnCurrentTurnChanged;
         
-        // Notify UI of initial state
-        if (BattleshipsUIManager.Instance != null)
+        // CRITICAL FIX: Only notify UI if we're actually starting a Battleships game
+        // Don't trigger UI on network spawn if game state is WaitingToStart (default)
+        // The UI will be shown when the host explicitly starts the game
+        if (gameState.Value != GameState.WaitingToStart)
         {
-            BattleshipsUIManager.Instance.OnGameStateChanged(gameState.Value);
-            // Also update turn display immediately
-            UpdateCombatUI();
+            if (BattleshipsUIManager.Instance != null)
+            {
+                BattleshipsUIManager.Instance.OnGameStateChanged(gameState.Value);
+                UpdateCombatUI();
+            }
+        }
+        else
+        {
+            Debug.Log("[BattleshipsGameManager] Spawned with WaitingToStart state - UI will show when game starts");
         }
     }
 
@@ -306,6 +314,35 @@ public class BattleshipsGameManager : NetworkBehaviour
         // Unsubscribe from changes
         gameState.OnValueChanged -= OnGameStateChanged;
         currentPlayerTurn.OnValueChanged -= OnCurrentTurnChanged;
+        
+        // CRITICAL: Clear the singleton instance on despawn
+        // This prevents stale references when starting a new game
+        if (instance == this)
+        {
+            instance = null;
+            Debug.Log("[BattleshipsGameManager] Instance cleared on network despawn");
+        }
+    }
+    
+    /// <summary>
+    /// Clean up and destroy this game manager (called when leaving a game)
+    /// </summary>
+    public static void CleanupInstance()
+    {
+        if (instance != null)
+        {
+            Debug.Log("[BattleshipsGameManager] Cleaning up instance");
+            
+            // Clear the singleton reference
+            var temp = instance;
+            instance = null;
+            
+            // Destroy the game object if it still exists
+            if (temp != null && temp.gameObject != null)
+            {
+                Destroy(temp.gameObject);
+            }
+        }
     }
     
     /// <summary>

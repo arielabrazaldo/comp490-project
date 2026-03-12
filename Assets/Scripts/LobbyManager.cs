@@ -41,6 +41,13 @@ public class LobbyManager : MonoBehaviour
         if (instance == null)
         {
             instance = this;
+            
+            // CRITICAL FIX: DontDestroyOnLoad only works for root GameObjects
+            // Unparent the GameObject first if it has a parent
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
         }
         else

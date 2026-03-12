@@ -97,6 +97,13 @@ public class UIManager_Streamlined : MonoBehaviour
         if (instance == null)
         {
             instance = this;
+            
+            // CRITICAL FIX: DontDestroyOnLoad only works for root GameObjects
+            // Unparent the GameObject first if it has a parent
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
         }
         else if (instance != this)
@@ -243,6 +250,26 @@ public class UIManager_Streamlined : MonoBehaviour
     private void ShowMainMenu()
     {
         HideAllPanels();
+        
+        // CRITICAL: Clean up any leftover Battleships panels
+        // This ensures no panels from previous games remain visible
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.CleanupForMainMenu();
+        }
+        
+        // Also ensure BattleshipsSetupManager panels are hidden
+        if (BattleshipsSetupManager.Instance != null)
+        {
+            BattleshipsSetupManager.Instance.HideBattleshipsGameSetup();
+        }
+        
+        // Also clean up DiceRaceUIManager if it exists
+        if (DiceRaceUIManager.Instance != null)
+        {
+            DiceRaceUIManager.Instance.HideAndCleanup();
+        }
+        
         mainMenuPanel?.SetActive(true);
         ClearStatus();
         Debug.Log("Showing Main Menu");
@@ -269,6 +296,14 @@ public class UIManager_Streamlined : MonoBehaviour
     private void ShowLobby()
     {
         HideAllPanels();
+        
+        // CRITICAL: Also ensure Battleships panels are hidden when showing lobby
+        // This prevents leftover panels from previous games
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.CleanupForMainMenu();
+        }
+        
         lobbyPanel?.SetActive(true);
         ClearStatus();
 
@@ -276,6 +311,9 @@ public class UIManager_Streamlined : MonoBehaviour
         {
             startGameButton.gameObject.SetActive(LobbyManager.Instance.IsLobbyHost());
         }
+        
+        // Update player list when showing lobby
+        UpdatePlayerList();
 
         Debug.Log("Showing Lobby Panel");
     }

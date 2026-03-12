@@ -49,7 +49,16 @@ public class NetworkGameManager : NetworkBehaviour
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject);
+            
+            // NOTE: For NetworkBehaviour objects, we should NOT call SetParent(null)
+            // as it interferes with NetworkObject's transform tracking.
+            // The DontDestroyOnLoad warning is acceptable for network objects.
+            // Only call DontDestroyOnLoad if this is already a root object
+            if (transform.parent == null)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
+            // If it has a parent, the parent should handle DontDestroyOnLoad
         }
         else if (instance != this)
         {

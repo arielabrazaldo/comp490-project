@@ -88,6 +88,13 @@ public class UIManager : MonoBehaviour
         if (instance == null)
         {
             instance = this;
+            
+            // CRITICAL FIX: DontDestroyOnLoad only works for root GameObjects
+            // Unparent the GameObject first if it has a parent
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
         }
         else if (instance != this)
@@ -981,11 +988,28 @@ public class UIManager : MonoBehaviour
             isBattleshipsMode = false;
             Debug.Log("? Reset Battleships mode flag");
         }
+        
+        // CRITICAL: Also reset Monopoly mode flag if applicable
+        if (isMonopolyMode)
+        {
+            isMonopolyMode = false;
+            Debug.Log("? Reset Monopoly mode flag");
+        }
 
         // Return to main menu and disconnect
         await LobbyManager.Instance.LeaveLobby();
 
         ShowMainMenu();
+    }
+    
+    /// <summary>
+    /// Reset all game mode flags (called when leaving any game type)
+    /// </summary>
+    public void ResetGameModeFlags()
+    {
+        isBattleshipsMode = false;
+        isMonopolyMode = false;
+        Debug.Log("? All game mode flags reset");
     }
 
     private void OnDiceRaceRollDiceClicked()
