@@ -972,7 +972,7 @@ public class UIManager_Streamlined : MonoBehaviour
 
 
             {
-                AddSectionHeader("STANDARD GAMES");
+                AddSectionHeader("\n");
                 foreach (var game in standardGames)
                 {
                     GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
@@ -982,7 +982,7 @@ public class UIManager_Streamlined : MonoBehaviour
             else
             {
                 // Optional: show message if no standard games
-                AddSectionHeader("STANDARD GAMES");
+                AddSectionHeader("\n");
             }
         
         }
@@ -991,7 +991,7 @@ public class UIManager_Streamlined : MonoBehaviour
             // Show only Custom Games
             if (customGames.Count > 0)
             {
-                AddSectionHeader("CUSTOM GAMES");
+                AddSectionHeader("\n");
                 foreach (var game in customGames)
                 {
                     GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
@@ -1001,7 +1001,7 @@ public class UIManager_Streamlined : MonoBehaviour
             else
             {
                 // Optional: show message if no custom games
-                AddSectionHeader("CUSTOM GAMES");
+                AddSectionHeader("\n");
             }
         }
 
