@@ -350,7 +350,7 @@ public class BattleshipsUIManager : MonoBehaviour
         // Set ship status title
         if (shipStatusTitleText != null)
         {
-            shipStatusTitleText.text = "<b>Your Fleet Status</b>";
+            shipStatusTitleText.text = "<b>Fleet Status</b>";
             shipStatusTitleText.richText = true; // Enable bold
         }
 
@@ -945,11 +945,11 @@ public class BattleshipsUIManager : MonoBehaviour
             if (buttonText != null)
             {
                 int length = GetShipLength(shipType);
-                buttonText.text = $"<color=green>?</color> {shipType} ({length})";
+                buttonText.text = $"<color=green>*</color> {shipType} ({length})";
             }
 
             var colors = button.colors;
-            colors.disabledColor = new Color(0.3f, 0.8f, 0.3f, 0.7f); // Light green
+            colors.disabledColor = new Color(1.0f, 0.0f, 0.0f, 1.0f); // red
             button.colors = colors;
         }
         else
@@ -1044,7 +1044,7 @@ public class BattleshipsUIManager : MonoBehaviour
 
         // Visual feedback
         VisualizeShipOnBoard(startPos, GetShipLength(shipType), isHorizontal);
-        ShowMessage($"<color=green>? {shipType} placed successfully!</color>");
+        ShowMessage($"<color=green>* {shipType} placed successfully!</color>");
 
         // Update ship status display with local data
         UpdateLocalShipStatus(shipType);
@@ -1413,24 +1413,25 @@ public class BattleshipsUIManager : MonoBehaviour
 
         // Disable button to prevent multiple clicks
         if (leaveGameButton != null) leaveGameButton.interactable = false;
+        if (returnToLobbyButton != null) returnToLobbyButton.interactable = false;
 
         try
         {
-            // Hide all game panels immediately
-            HideAllPanels();
-            Debug.Log("? All game panels hidden");
+            // CRITICAL: Clean up all Battleships state FIRST (includes ResetGameState)
+            CleanupForMainMenu();
+            Debug.Log("? All Battleships state cleaned up");
 
             // Leave the lobby/disconnect from game
             if (LobbyManager.Instance != null)
             {
                 await LobbyManager.Instance.LeaveLobby();
-                Debug.Log("? Left game successfully");
+                Debug.Log("? Left lobby successfully");
             }
 
-            // Return to main menu
+            // CRITICAL FIX: Return to MAIN MENU, not saved games panel
             if (UIManager_Streamlined.Instance != null)
             {
-                UIManager_Streamlined.Instance.ShowGameModeSelectionPublic();
+                UIManager_Streamlined.Instance.ShowMainMenuPublic();
                 Debug.Log("? Returned to main menu");
             }
         }
@@ -1438,17 +1439,18 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             Debug.LogError($"? Error leaving game: {e.Message}");
 
-            // Force hide panels and return to menu anyway
-            HideAllPanels();
+            // Force cleanup and return to menu anyway
+            CleanupForMainMenu();
             if (UIManager_Streamlined.Instance != null)
             {
-                UIManager_Streamlined.Instance.ShowGameModeSelectionPublic();
+                UIManager_Streamlined.Instance.ShowMainMenuPublic();
             }
         }
         finally
         {
-            // Re-enable button
+            // Re-enable buttons
             if (leaveGameButton != null) leaveGameButton.interactable = true;
+            if (returnToLobbyButton != null) returnToLobbyButton.interactable = true;
         }
     }
 
@@ -1606,7 +1608,11 @@ public class BattleshipsUIManager : MonoBehaviour
         {
             Debug.LogWarning("?? Enemy board parent reference is null");
         }
-
+        
+        // CRITICAL: Clean up BattleshipsGameManager instance to prevent stale state
+        BattleshipsGameManager.CleanupInstance();
+        Debug.Log("? BattleshipsGameManager instance cleaned up");
+        
         Debug.Log("? BattleshipsUIManager cleanup complete");
     }
 
@@ -1652,6 +1658,23 @@ public class BattleshipsUIManager : MonoBehaviour
     /// </summary>
     public void OnGameStateChanged(BattleshipsGameManager.GameState newState)
     {
+        // CRITICAL FIX: Guard against spurious state changes
+        // Only show panels if we're truly in a Battleships game session
+        // Check if BattleshipsGameManager is properly initialized
+        if (BattleshipsGameManager.Instance == null)
+        {
+            Debug.Log("[BattleshipsUIManager] OnGameStateChanged called but no BattleshipsGameManager instance - ignoring");
+            return;
+        }
+        
+        // Additional guard: Check if this manager's panels should be showing
+        // If the lobby panel is active, we shouldn't be showing game panels
+        if (UIManager_Streamlined.Instance != null)
+        {
+            // If we're not supposed to be in a game yet, don't show panels
+            // The PlacingShips state should only trigger UI after the lobby explicitly starts the game
+        }
+        
         switch (newState)
         {
             case BattleshipsGameManager.GameState.WaitingToStart:

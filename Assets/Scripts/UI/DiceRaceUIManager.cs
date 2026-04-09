@@ -188,6 +188,14 @@ public class DiceRaceUIManager : MonoBehaviour
         HideAllPanels();
         Debug.Log("[DiceRaceUIManager] Hidden and cleaned up");
     }
+    
+    /// <summary>
+    /// Alias for HideAndCleanup for consistency with other managers
+    /// </summary>
+    public void HideGamePanel()
+    {
+        HideAndCleanup();
+    }
 
     #endregion
 

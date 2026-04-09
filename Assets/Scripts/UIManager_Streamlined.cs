@@ -97,6 +97,13 @@ public class UIManager_Streamlined : MonoBehaviour
         if (instance == null)
         {
             instance = this;
+            
+            // CRITICAL FIX: DontDestroyOnLoad only works for root GameObjects
+            // Unparent the GameObject first if it has a parent
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
         }
         else if (instance != this)
@@ -243,6 +250,26 @@ public class UIManager_Streamlined : MonoBehaviour
     private void ShowMainMenu()
     {
         HideAllPanels();
+        
+        // CRITICAL: Clean up any leftover Battleships panels
+        // This ensures no panels from previous games remain visible
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.CleanupForMainMenu();
+        }
+        
+        // Also ensure BattleshipsSetupManager panels are hidden
+        if (BattleshipsSetupManager.Instance != null)
+        {
+            BattleshipsSetupManager.Instance.HideBattleshipsGameSetup();
+        }
+        
+        // Also clean up DiceRaceUIManager if it exists
+        if (DiceRaceUIManager.Instance != null)
+        {
+            DiceRaceUIManager.Instance.HideAndCleanup();
+        }
+        
         mainMenuPanel?.SetActive(true);
         ClearStatus();
         Debug.Log("Showing Main Menu");
@@ -269,6 +296,14 @@ public class UIManager_Streamlined : MonoBehaviour
     private void ShowLobby()
     {
         HideAllPanels();
+        
+        // CRITICAL: Also ensure Battleships panels are hidden when showing lobby
+        // This prevents leftover panels from previous games
+        if (BattleshipsUIManager.Instance != null)
+        {
+            BattleshipsUIManager.Instance.CleanupForMainMenu();
+        }
+        
         lobbyPanel?.SetActive(true);
         ClearStatus();
 
@@ -276,6 +311,9 @@ public class UIManager_Streamlined : MonoBehaviour
         {
             startGameButton.gameObject.SetActive(LobbyManager.Instance.IsLobbyHost());
         }
+        
+        // Update player list when showing lobby
+        UpdatePlayerList();
 
         Debug.Log("Showing Lobby Panel");
     }
@@ -934,7 +972,7 @@ public class UIManager_Streamlined : MonoBehaviour
 
 
             {
-                AddSectionHeader("STANDARD GAMES");
+                AddSectionHeader("\n");
                 foreach (var game in standardGames)
                 {
                     GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
@@ -944,7 +982,7 @@ public class UIManager_Streamlined : MonoBehaviour
             else
             {
                 // Optional: show message if no standard games
-                AddSectionHeader("STANDARD GAMES");
+                AddSectionHeader("\n");
             }
         
         }
@@ -953,7 +991,7 @@ public class UIManager_Streamlined : MonoBehaviour
             // Show only Custom Games
             if (customGames.Count > 0)
             {
-                AddSectionHeader("CUSTOM GAMES");
+                AddSectionHeader("\n");
                 foreach (var game in customGames)
                 {
                     GameObject listItem = Instantiate(savedGameItemPrefab, savedGamesListContent);
@@ -963,7 +1001,7 @@ public class UIManager_Streamlined : MonoBehaviour
             else
             {
                 // Optional: show message if no custom games
-                AddSectionHeader("CUSTOM GAMES");
+                AddSectionHeader("\n");
             }
         }
 
@@ -1144,12 +1182,25 @@ public class UIManager_Streamlined : MonoBehaviour
     /// </summary>
     public void OnRulesConfigured(GameRules rules)
     {
-        Debug.Log("[UIManager_Streamlined] Rules configured, saving game...");
+        // Generate a default name based on game type
+        int gameType = DetermineGameTypeFromRules(rules);
+        int recommendedPlayerCount = DeterminePlayerCountFromRules(rules);
+        string gameName = $"{GetGameTypeName(gameType)} ({recommendedPlayerCount}P)";
+        
+        OnRulesConfigured(rules, gameName);
+    }
+    
+    /// <summary>
+    /// Called from RuleEditorUI after user finishes configuring rules with a custom name.
+    /// Saves the custom game and returns to main menu (does NOT create lobby).
+    /// </summary>
+    public void OnRulesConfigured(GameRules rules, string gameName)
+    {
+        Debug.Log($"[UIManager_Streamlined] Rules configured, saving game as '{gameName}'...");
 
         // Determine game type from rules (no analyzer needed)
         int gameType = DetermineGameTypeFromRules(rules);
         int recommendedPlayerCount = DeterminePlayerCountFromRules(rules);
-        string gameName = $"{GetGameTypeName(gameType)} ({recommendedPlayerCount}P)";
 
         // Create SavedGameInfo
         SavedGameInfo savedGame = new SavedGameInfo(
@@ -1187,6 +1238,56 @@ public class UIManager_Streamlined : MonoBehaviour
         
         // Delay showing main menu to let user see the success message
         StartCoroutine(ReturnToMainMenuAfterDelay(2f));
+    }
+    
+    /// <summary>
+    /// Called from RuleEditorUI to save the game without navigating away.
+    /// This allows the RuleEditorUI to show its own confirmation panel.
+    /// </summary>
+    /// <param name="rules">The game rules to save</param>
+    /// <param name="gameName">The name for the game</param>
+    /// <param name="overwrite">If true, overwrite existing game with same name</param>
+    public void OnRulesConfiguredWithoutNavigation(GameRules rules, string gameName, bool overwrite = false)
+    {
+        Debug.Log($"[UIManager_Streamlined] Rules configured (no navigation), saving game as '{gameName}' (overwrite={overwrite})...");
+
+        // Determine game type from rules
+        int gameType = DetermineGameTypeFromRules(rules);
+        int recommendedPlayerCount = DeterminePlayerCountFromRules(rules);
+
+        // Create SavedGameInfo
+        SavedGameInfo savedGame = new SavedGameInfo(
+            gameName,
+            gameType,
+            recommendedPlayerCount,
+            rules,
+            isStandardGame: false // Custom game
+        );
+
+        // Save game to disk
+        if (GameSaveManager.Instance != null)
+        {
+            bool saved = GameSaveManager.Instance.SaveGame(savedGame, overwrite);
+            if (saved)
+            {
+                string action = overwrite ? "updated" : "saved";
+                Debug.Log($"? Custom game '{gameName}' {action} to disk");
+                SetStatus($"Game '{gameName}' {action}!", Color.green);
+            }
+            else
+            {
+                Debug.LogWarning($"?? Failed to save custom game '{gameName}'");
+                SetStatus("Warning: Game not saved to disk", Color.yellow);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[UIManager_Streamlined] GameSaveManager not found - game not saved!");
+            SetStatus("Warning: GameSaveManager not found", Color.yellow);
+        }
+        
+        // Don't navigate away - let RuleEditorUI handle the confirmation panel
+        Debug.Log("[UIManager_Streamlined] Game saved. RuleEditorUI will handle navigation.");
     }
 
     /// <summary>
@@ -1339,6 +1440,109 @@ public class UIManager_Streamlined : MonoBehaviour
     public void SetStatusErrorPublic(string message)
     {
         SetStatus(message, Color.red);
+    }
+    #endregion
+
+    #region Public API - Custom Games List
+    /// <summary>
+    /// Populates a scroll view content with custom games only.
+    /// Called by RuleEditorUI to reuse the same list logic.
+    /// </summary>
+    /// <param name="contentTransform">The Content transform of the ScrollView to populate</param>
+    /// <param name="itemPrefab">The prefab to use for each list item</param>
+    /// <param name="onItemClicked">Callback when an item is clicked, receives SavedGameInfo</param>
+    /// <returns>List of custom games that were loaded</returns>
+    public List<SavedGameInfo> PopulateCustomGamesList(Transform contentTransform, GameObject itemPrefab, System.Action<SavedGameInfo> onItemClicked)
+    {
+        List<SavedGameInfo> customGames = new List<SavedGameInfo>();
+        
+        if (contentTransform == null || itemPrefab == null)
+        {
+            Debug.LogWarning("[UIManager_Streamlined] PopulateCustomGamesList: contentTransform or itemPrefab is null");
+            return customGames;
+        }
+        
+        // Clear existing items
+        foreach (Transform child in contentTransform)
+        {
+            Destroy(child.gameObject);
+        }
+        
+        // Load custom games from GameSaveManager
+        if (GameSaveManager.Instance != null)
+        {
+            List<SavedGameInfo> allGames = GameSaveManager.Instance.LoadAllGames();
+            
+            // Filter to only custom games
+            foreach (var game in allGames)
+            {
+                if (!game.isStandardGame)
+                {
+                    customGames.Add(game);
+                }
+            }
+            
+            Debug.Log($"[UIManager_Streamlined] PopulateCustomGamesList: Loaded {customGames.Count} custom games");
+        }
+        
+        // Create list items
+        foreach (var game in customGames)
+        {
+            GameObject listItem = Instantiate(itemPrefab, contentTransform);
+            SetupSavedGameListItemWithCallback(listItem, game, onItemClicked);
+        }
+        
+        // Force layout rebuild
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentTransform as RectTransform);
+        
+        return customGames;
+    }
+    
+    /// <summary>
+    /// Setup a saved game list item with a custom click callback
+    /// </summary>
+    private void SetupSavedGameListItemWithCallback(GameObject listItem, SavedGameInfo gameInfo, System.Action<SavedGameInfo> onItemClicked)
+    {
+        // Find TMP texts
+        TextMeshProUGUI gameNameText = null;
+        TextMeshProUGUI gameDetailsText = null;
+
+        foreach (var t in listItem.GetComponentsInChildren<TextMeshProUGUI>(true))
+        {
+            if (t.gameObject.name == "GameNameText") gameNameText = t;
+            else if (t.gameObject.name == "GameDetailsText") gameDetailsText = t;
+        }
+
+        if (gameNameText != null)
+        {
+            gameNameText.text = gameInfo.gameName;
+            gameNameText.color = Color.white;
+        }
+
+        if (gameDetailsText != null)
+        {
+            string description = gameInfo.GetDescription();
+            
+            // Add yellow color to modified date for custom games
+            if (!gameInfo.isStandardGame)
+            {
+                description = description.Replace(
+                    $"Modified {gameInfo.lastModifiedDate:MMM dd}",
+                    $"<color=#FFD700>Modified {gameInfo.lastModifiedDate:MMM dd}</color>"
+                );
+            }
+            
+            gameDetailsText.text = description;
+        }
+
+        // Setup button click handler
+        Button button = listItem.GetComponent<Button>();
+        if (button != null && onItemClicked != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => onItemClicked(gameInfo));
+        }
     }
     #endregion
 }
