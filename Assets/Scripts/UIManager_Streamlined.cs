@@ -753,6 +753,28 @@ public class UIManager_Streamlined : MonoBehaviour
             if (success)
             {
                 SetStatus("Custom game started!", Color.green);
+                HideAllPanels();
+
+                int spawnedGameType = currentGameInfo?.gameType ?? 4;
+                switch (spawnedGameType)
+                {
+                    case 1: // Monopoly — MonopolyUI handles its own panel via events
+                        Debug.Log("[UIManager_Streamlined] Monopoly spawned - MonopolyUI will handle panel");
+                        break;
+                    case 2: // Battleships
+                        if (BattleshipsUIManager.Instance != null)
+                            BattleshipsUIManager.Instance.ShowShipPlacementPanel();
+                        else
+                            Debug.LogError("[UIManager_Streamlined] BattleshipsUIManager not found!");
+                        break;
+                    case 4: // Hybrid/Custom
+                    default:
+                        if (HybridUIManager.Instance != null)
+                            HybridUIManager.Instance.StartGame();
+                        else
+                            Debug.LogError("[UIManager_Streamlined] HybridUIManager not found in scene! Add the HybridUIManager prefab.");
+                        break;
+                }
             }
             else
             {
@@ -1324,9 +1346,8 @@ public class UIManager_Streamlined : MonoBehaviour
             return 2; // Battleships
         }
         
-        // Check for simple Dice Race (no complex features)
-        if (!rules.enableCurrency && !rules.canPurchaseProperties && !rules.enableCombat &&
-            (rules.winCondition == WinCondition.ReachGoal || rules.winCondition == WinCondition.ReachSpecificTile))
+        // Check for simple Dice Race: no economy, no combat, no separate boards
+        if (!rules.enableCurrency && !rules.canPurchaseProperties && !rules.enableCombat && !rules.separatePlayerBoards)
         {
             return 3; // Dice Race
         }

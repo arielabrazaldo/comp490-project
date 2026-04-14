@@ -1880,6 +1880,7 @@ public class UIManager : MonoBehaviour
         SetStatusSuccess(message);
     }
 
+
     /// <summary>
     /// Public API for setting status error message (for other managers)
     /// </summary>

@@ -403,9 +403,14 @@ public class CustomGameSpawner : MonoBehaviour
         {
             // Fallback: Dynamic spawn
             Debug.LogWarning($"[CustomGameSpawner] {typeof(T).Name} prefab not found, using dynamic spawn");
-            GameObject gameObject = new GameObject(typeof(T).Name);
-            gameObject.AddComponent<T>();
-            NetworkObject networkObject = gameObject.AddComponent<NetworkObject>();
+            GameObject go = new GameObject(typeof(T).Name);
+            go.AddComponent<T>();
+            // Only add NetworkObject if the component doesn't already inherit one
+            NetworkObject networkObject = go.GetComponent<NetworkObject>();
+            if (networkObject == null)
+            {
+                networkObject = go.AddComponent<NetworkObject>();
+            }
             networkObject.Spawn();
             return true;
         }

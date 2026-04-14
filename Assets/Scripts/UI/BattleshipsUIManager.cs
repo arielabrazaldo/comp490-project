@@ -350,7 +350,7 @@ public class BattleshipsUIManager : MonoBehaviour
         // Set ship status title
         if (shipStatusTitleText != null)
         {
-            shipStatusTitleText.text = "<b>Fleet Status</b>";
+            shipStatusTitleText.text = "<b>Your Fleet Status</b>";
             shipStatusTitleText.richText = true; // Enable bold
         }
 
@@ -945,11 +945,11 @@ public class BattleshipsUIManager : MonoBehaviour
             if (buttonText != null)
             {
                 int length = GetShipLength(shipType);
-                buttonText.text = $"<color=green>*</color> {shipType} ({length})";
+                buttonText.text = $"<color=green>?</color> {shipType} ({length})";
             }
 
             var colors = button.colors;
-            colors.disabledColor = new Color(1.0f, 0.0f, 0.0f, 1.0f); // red
+            colors.disabledColor = new Color(0.3f, 0.8f, 0.3f, 0.7f); // Light green
             button.colors = colors;
         }
         else
@@ -1044,7 +1044,7 @@ public class BattleshipsUIManager : MonoBehaviour
 
         // Visual feedback
         VisualizeShipOnBoard(startPos, GetShipLength(shipType), isHorizontal);
-        ShowMessage($"<color=green>* {shipType} placed successfully!</color>");
+        ShowMessage($"<color=green>? {shipType} placed successfully!</color>");
 
         // Update ship status display with local data
         UpdateLocalShipStatus(shipType);

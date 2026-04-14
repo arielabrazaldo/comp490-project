@@ -230,6 +230,39 @@ public class HybridPropertyModule : MonoBehaviour
     }
 
     /// <summary>
+    /// Convenience method called by HybridUIManager when the player clicks "Buy Property".
+    /// Resolves player and property data from HybridGameManager and delegates to PurchaseProperty.
+    /// </summary>
+    public void TryPurchaseProperty(int playerId, int position, List<HybridPlayerData> players)
+    {
+        if (!properties.ContainsKey(position))
+        {
+            Debug.LogWarning($"[HybridPropertyModule] No property at position {position}");
+            if (HybridGameManager.Instance != null)
+                HybridGameManager.Instance.BroadcastGameMessage("No property to buy here.");
+            return;
+        }
+
+        var property = properties[position];
+
+        if (property.ownerId != -1)
+        {
+            Debug.LogWarning($"[HybridPropertyModule] Property at {position} is already owned by player {property.ownerId}");
+            if (HybridGameManager.Instance != null)
+                HybridGameManager.Instance.BroadcastGameMessage("That property is already owned.");
+            return;
+        }
+
+        if (playerId < 0 || playerId >= players.Count)
+        {
+            Debug.LogError($"[HybridPropertyModule] Invalid playerId {playerId}");
+            return;
+        }
+
+        PurchaseProperty(playerId, position, players[playerId], property);
+    }
+
+    /// <summary>
     /// Get property data at position
     /// </summary>
     public PropertyData GetProperty(int position)
@@ -243,6 +276,35 @@ public class HybridPropertyModule : MonoBehaviour
     public Dictionary<int, PropertyData> GetAllProperties()
     {
         return properties;
+    }
+
+    /// <summary>
+    /// Overrides generated property data with values from the board editor
+    /// (SerializableTileData). Called by HybridGameManager after the board loads.
+    /// Only tiles with tileType == "Property" and isInteractive == true are registered.
+    /// </summary>
+    public void LoadPropertiesFromBoardData(List<SerializableTileData> tiles)
+    {
+        if (tiles == null) return;
+
+        properties.Clear();
+
+        foreach (var tile in tiles)
+        {
+            if (tile.tileType != "Property" || !tile.isInteractive) continue;
+
+            properties[tile.tileId] = new PropertyData
+            {
+                position      = tile.tileId,
+                propertyName  = string.IsNullOrEmpty(tile.tileName) ? $"Property {tile.tileId}" : tile.tileName,
+                purchasePrice = tile.propertyPrice > 0 ? tile.propertyPrice : 100,
+                rentPrice     = tile.propertyRent  > 0 ? tile.propertyRent  : 10,
+                ownerId       = -1,
+                description   = tile.tileDescription ?? string.Empty
+            };
+        }
+
+        Debug.Log($"[HybridPropertyModule] Loaded {properties.Count} properties from board data");
     }
 
     /// <summary>
@@ -273,4 +335,5 @@ public class PropertyData
     public int purchasePrice;
     public int rentPrice;
     public int ownerId; // -1 = unowned
+    public string description; // sourced from SerializableTileData.tileDescription via board editor
 }
