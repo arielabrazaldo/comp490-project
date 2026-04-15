@@ -54,6 +54,9 @@ public class SharedGameSelectionOverlay : MonoBehaviour
     private System.Action                onReturnToMenu;            // from confirmation panel
     private System.Action                onContinueEditing;         // from confirmation panel
 
+    // Background panel supplied by the active caller (overrides the serialized backgroundContent)
+    private GameObject activeBackground = null;
+
     // ?? Unity lifecycle ??????????????????????????????????????????????????
 
     private void Awake()
@@ -67,6 +70,16 @@ public class SharedGameSelectionOverlay : MonoBehaviour
     }
 
     // ?? public API ???????????????????????????????????????????????????????
+
+    /// <summary>
+    /// Register the background panel that should be hidden while this overlay is open.
+    /// Call this from the editor's Start() before opening any panel.
+    /// Overrides the serialized backgroundContent field for the active caller.
+    /// </summary>
+    public void RegisterBackground(GameObject background)
+    {
+        activeBackground = background;
+    }
 
     /// <summary>
     /// Open the selection panel.
@@ -168,8 +181,11 @@ public class SharedGameSelectionOverlay : MonoBehaviour
 
     private void SetOverlayVisible(bool visible)
     {
-        if (overlayPanel      != null) overlayPanel.SetActive(visible);
-        if (backgroundContent != null) backgroundContent.SetActive(!visible);
+        if (overlayPanel != null) overlayPanel.SetActive(visible);
+
+        // Prefer the runtime-registered background; fall back to the serialized field
+        GameObject bg = activeBackground != null ? activeBackground : backgroundContent;
+        if (bg != null) bg.SetActive(!visible);
     }
 
     private void WireButtons()

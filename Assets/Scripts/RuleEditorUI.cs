@@ -70,6 +70,7 @@ public class RuleEditorUI : MonoBehaviour
     
     [Header("Shared Overlay")]
     [SerializeField] private SharedGameSelectionOverlay sharedOverlay; // Shared overlay GameObject (used by both Rule and Board editors)
+    [SerializeField] private GameObject backgroundContent; // Panel hidden while the shared overlay is open
     
     [Header("Action Buttons")]
     [SerializeField] private Button applyButton;
@@ -99,6 +100,10 @@ public class RuleEditorUI : MonoBehaviour
 
     private void Start()
     {
+        // Register this editor's background panel with the shared overlay
+        if (sharedOverlay != null && backgroundContent != null)
+            sharedOverlay.RegisterBackground(backgroundContent);
+
         // Hide all detail panels initially
         HideAllDetailPanels();
         
