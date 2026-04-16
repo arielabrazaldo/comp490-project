@@ -62,10 +62,6 @@ public class SharedGameSelectionOverlay : MonoBehaviour
     private void Awake()
     {
         WireButtons();
-    }
-
-    private void Start()
-    {
         HideAll();
     }
 
