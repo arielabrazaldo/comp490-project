@@ -20088,6 +20088,7 @@ MonoBehaviour:
   battleshipsPresetButton: {fileID: 1545500051}
   customPresetButton: {fileID: 753870040}
   sharedOverlay: {fileID: 255355973}
+  backgroundContent: {fileID: 1242320845}
   applyButton: {fileID: 2062849819}
   resetButton: {fileID: 2056761693}
   statusText: {fileID: 88149452}
@@ -20269,7 +20270,6 @@ MonoBehaviour:
   shapeSelectionHighlight: {fileID: 0}
   tileCountSlider: {fileID: 0}
   tileCountValueLabel: {fileID: 0}
-  boardNameInput: {fileID: 0}
   proceedToCanvasButton: {fileID: 0}
   canvasPanel: {fileID: 0}
   tileCanvasRoot: {fileID: 0}
@@ -20305,16 +20305,6 @@ MonoBehaviour:
   mortgageValueInput: {fileID: 0}
   propertyGroupSwatches: []
   closeTileInspectorButton: {fileID: 0}
-  overlayPanel: {fileID: 0}
-  backgroundContent: {fileID: 0}
-  namingPanel: {fileID: 0}
-  boardFileNameInput: {fileID: 0}
-  confirmSaveButton: {fileID: 0}
-  cancelSaveButton: {fileID: 0}
-  confirmationPanel: {fileID: 0}
-  confirmationText: {fileID: 0}
-  returnToMenuButton: {fileID: 0}
-  continueEditingButton: {fileID: 0}
   statusText: {fileID: 0}
   standaloneMode: 0
 --- !u!114 &791688807
@@ -24633,6 +24623,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b301c5aaff1a5924f8274f2790a8f2ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MuteAllAudio
+  buttonText: {fileID: 0}
 --- !u!1 &1015171178
 GameObject:
   m_ObjectHideFlags: 0
