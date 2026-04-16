@@ -20272,9 +20272,9 @@ MonoBehaviour:
   tileCountValueLabel: {fileID: 0}
   boardNameInput: {fileID: 0}
   proceedToCanvasButton: {fileID: 0}
-  canvasPanel: {fileID: 0}
-  tileCanvasRoot: {fileID: 0}
-  tileSlotPrefab: {fileID: 0}
+  canvasPanel: {fileID: 1247493601}
+  tileCanvasRoot: {fileID: 1498371998}
+  tileSlotPrefab: {fileID: 5626480608880158870, guid: 437f958815e192348988caaf8bb7f3e8, type: 3}
   addTileButton: {fileID: 0}
   removeTileButton: {fileID: 0}
   duplicateTileButton: {fileID: 0}
@@ -22593,7 +22593,6 @@ GameObject:
   - component: {fileID: 905104308}
   - component: {fileID: 905104310}
   - component: {fileID: 905104309}
-  - component: {fileID: 905104311}
   m_Layer: 0
   m_Name: BoardEditorPanel
   m_TagString: Untagged
@@ -22664,70 +22663,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 905104307}
   m_CullTransparentMesh: 1
---- !u!114 &905104311
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 905104307}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4b3f4e20468aeb5469028c7435dc8f70, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BoardEditorUI
-  boardEditorPanel: {fileID: 905104307}
-  closeButton: {fileID: 714028166}
-  goToRuleEditorButton: {fileID: 1250712474}
-  selectExistingGameButton: {fileID: 1484758016}
-  sharedOverlay: {fileID: 255355973}
-  shapePickerPanel: {fileID: 1088531421}
-  shapeCard_Monopoly: {fileID: 0}
-  shapeCard_Linear: {fileID: 0}
-  shapeCard_Grid: {fileID: 0}
-  shapeCard_Circular: {fileID: 0}
-  shapeCard_Custom: {fileID: 0}
-  shapeSelectionHighlight: {fileID: 0}
-  tileCountSlider: {fileID: 0}
-  tileCountValueLabel: {fileID: 0}
-  boardNameInput: {fileID: 0}
-  proceedToCanvasButton: {fileID: 0}
-  canvasPanel: {fileID: 1247493601}
-  tileCanvasRoot: {fileID: 1498371998}
-  tileSlotPrefab: {fileID: 5626480608880158870, guid: 437f958815e192348988caaf8bb7f3e8, type: 3}
-  addTileButton: {fileID: 0}
-  removeTileButton: {fileID: 0}
-  duplicateTileButton: {fileID: 0}
-  tileCountLabel: {fileID: 0}
-  backToShapePickerButton: {fileID: 0}
-  openSaveButton: {fileID: 0}
-  tileInspectorPanel: {fileID: 761746294}
-  tileLabelInput: {fileID: 0}
-  typeBtn_Normal: {fileID: 0}
-  typeBtn_Property: {fileID: 0}
-  typeBtn_Special: {fileID: 0}
-  typeBtn_Start: {fileID: 0}
-  typeBtn_Goal: {fileID: 0}
-  typeBtn_Railroad: {fileID: 0}
-  typeBtn_Utility: {fileID: 0}
-  shapeBtn_Rectangle: {fileID: 0}
-  shapeBtn_Square: {fileID: 0}
-  shapeBtn_Circle: {fileID: 0}
-  shapeBtn_Hexagon: {fileID: 0}
-  bgColorSwatches: []
-  borderColorSwatches: []
-  widthSlider: {fileID: 0}
-  heightSlider: {fileID: 0}
-  sizeLabel: {fileID: 0}
-  propertyFieldsPanel: {fileID: 0}
-  propertyPriceInput: {fileID: 0}
-  propertyRentInput: {fileID: 0}
-  buildingCostInput: {fileID: 0}
-  mortgageValueInput: {fileID: 0}
-  propertyGroupSwatches: []
-  closeTileInspectorButton: {fileID: 0}
-  statusText: {fileID: 0}
-  standaloneMode: 0
 --- !u!1 &911302679
 GameObject:
   m_ObjectHideFlags: 0
@@ -24689,7 +24624,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b301c5aaff1a5924f8274f2790a8f2ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MuteAllAudio
-  buttonText: {fileID: 0}
 --- !u!1 &1015171178
 GameObject:
   m_ObjectHideFlags: 0
@@ -35481,7 +35415,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1498371998}
   - component: {fileID: 1498372000}
-  - component: {fileID: 1498371999}
   m_Layer: 0
   m_Name: TileCanvasRoot
   m_TagString: Untagged
@@ -35508,36 +35441,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1498371999
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1498371997}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!222 &1498372000
 CanvasRenderer:
   m_ObjectHideFlags: 0
