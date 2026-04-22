@@ -93,6 +93,12 @@ public class HybridGameManager : NetworkBehaviour
             gameState.Value = GameState.WaitingToStart;
         }
         
+        // CRITICAL: Use OnValueChanged so turn notifications always fire AFTER the
+        // NetworkVariable has been updated on this client. RPCs have no ordering
+        // guarantee relative to NetworkVariable syncs, so reading currentPlayerId.Value
+        // inside an RPC callback can return the stale previous value.
+        currentPlayerId.OnValueChanged += (prev, next) => OnPlayerTurnChanged?.Invoke(next);
+        
         Debug.Log("[HybridGameManager] Network spawned");
     }
 
@@ -122,11 +128,13 @@ public class HybridGameManager : NetworkBehaviour
 
         // Start game
         string rulesJson = JsonUtility.ToJson(rules);
-        StartGameClientRpc(rulesJson, gameName);
         
+        // CRITICAL: Set state BEFORE sending RPC so clients read InProgress when UI initialises
         gameState.Value = GameState.InProgress;
         OnGameStarted?.Invoke();
         OnGameStateChanged?.Invoke(GameState.InProgress);
+        
+        StartGameClientRpc(rulesJson, gameName);
 
         Debug.Log("[HybridGameManager] Hybrid game initialized and started!");
     }
@@ -341,17 +349,14 @@ public class HybridGameManager : NetworkBehaviour
     {
         int nextPlayer = (currentPlayerId.Value + 1) % playerCount.Value;
         currentPlayerId.Value = nextPlayer;
-        
-        OnPlayerTurnChanged?.Invoke(nextPlayer);
-        UpdateCurrentPlayerClientRpc(nextPlayer);
-        
+        // OnPlayerTurnChanged is fired via currentPlayerId.OnValueChanged on all machines
         Debug.Log($"[HybridGameManager] Turn advanced to player {nextPlayer}");
     }
 
     [ClientRpc]
     private void UpdateCurrentPlayerClientRpc(int newPlayerId)
     {
-        if (!IsServer) OnPlayerTurnChanged?.Invoke(newPlayerId);
+        // Kept for backwards compatibility — turn notification now handled by OnValueChanged
     }
 
     [ClientRpc]

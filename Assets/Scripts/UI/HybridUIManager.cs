@@ -79,6 +79,7 @@ public class HybridUIManager : MonoBehaviour
     [SerializeField] private Transform hybridBoardParent;
 
     private bool isSubscribedToEvents = false;
+    private bool isGameStarted = false;
     private GameRules activeRules;
     private readonly List<GameObject> spawnedResourceTrackers = new List<GameObject>();
 
@@ -153,9 +154,18 @@ public class HybridUIManager : MonoBehaviour
     /// Called by UIManager_Streamlined after CustomGameSpawner successfully spawns a Hybrid game.
     /// Reads the active rules and configures which UI panels are shown.
     /// </summary>
-    public void StartGame()
+    public async void StartGame()
     {
+        if (isGameStarted)
+        {
+            Debug.Log("[HybridUIManager] StartGame already initialised, skipping duplicate call");
+            return;
+        }
+        isGameStarted = true;
         Debug.Log("[HybridUIManager] StartGame called");
+
+        // Hide lobby/menu panels for all clients
+        UIManager_Streamlined.Instance?.HideAllPanelsPublic();
 
         activeRules = RuleEditorManager.Instance?.GetCurrentRules()
                    ?? HybridGameManager.Instance?.GetActiveRules();
@@ -172,7 +182,6 @@ public class HybridUIManager : MonoBehaviour
         hybridGamePanel?.SetActive(true);
         gameOverPanel?.SetActive(false);
 
-        // Load and generate the custom board from JSON, then activate it
         if (hybridBoardParent != null)
         {
             hybridBoardParent.gameObject.SetActive(true);
@@ -184,10 +193,13 @@ public class HybridUIManager : MonoBehaviour
         }
 
         UpdateCurrentPlayerDisplay(HybridGameManager.Instance != null ? HybridGameManager.Instance.GetCurrentPlayerId() : 0);
-        UpdateRollDiceButton();
 
         if (gameStatusText != null)
             gameStatusText.text = "Game in progress — roll the dice!";
+
+        // CRITICAL: Wait a frame so NetworkVariables finish syncing before updating button states
+        await System.Threading.Tasks.Task.Delay(100);
+        UpdateRollDiceButton();
 
         Debug.Log("[HybridUIManager] Game UI configured and visible");
     }
@@ -197,6 +209,7 @@ public class HybridUIManager : MonoBehaviour
     /// </summary>
     public void HideAndCleanup()
     {
+        isGameStarted = false;
         UnsubscribeFromEvents();
         HideAllPanels();
         ClearResourceTrackers();
@@ -587,10 +600,16 @@ public class HybridUIManager : MonoBehaviour
                 buttonText.text = "Roll Dice!";
                 buttonText.color = Color.white;
             }
-            else if (!gameInProgress)
+            else if (HybridGameManager.Instance.GetGameState() == HybridGameManager.GameState.GameOver)
             {
                 buttonText.text = "Game Over";
                 buttonText.color = Color.red;
+            }
+            else if (!gameInProgress)
+            {
+                // WaitingToStart or other non-progress state
+                buttonText.text = "Waiting...";
+                buttonText.color = Color.gray;
             }
             else
             {
