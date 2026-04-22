@@ -236,6 +236,11 @@ public class UIManager_Streamlined : MonoBehaviour
     #endregion
 
     #region Panel Management
+    public void HideAllPanelsPublic()
+    {
+        HideAllPanels();
+    }
+
     private void HideAllPanels()
     {
         mainMenuPanel?.SetActive(false);
@@ -422,8 +427,8 @@ public class UIManager_Streamlined : MonoBehaviour
     {
         Debug.Log($"Hosting saved game: {gameInfo.gameName}");
 
-        // DICE RACE: Show Dice Race setup panel
-        if (gameInfo.gameType == 3 || gameInfo.gameName == "Dice Race")
+        // DICE RACE: Show Dice Race setup panel (standard games only)
+        if ((gameInfo.gameType == 3 || gameInfo.gameName == "Dice Race") && gameInfo.isStandardGame)
         {
             Debug.Log("[UIManager_Streamlined] Dice Race detected - showing setup panel");
             
@@ -446,8 +451,8 @@ public class UIManager_Streamlined : MonoBehaviour
             return;
         }
         
-        // BATTLESHIPS: Show Battleships setup panel
-        if (gameInfo.gameType == 2 || gameInfo.gameName == "Classic Battleships")
+        // BATTLESHIPS: Show Battleships setup panel (standard games only)
+        if ((gameInfo.gameType == 2 || gameInfo.gameName == "Classic Battleships") && gameInfo.isStandardGame)
         {
             Debug.Log("[UIManager_Streamlined] Battleships detected - showing setup panel");
             
@@ -721,9 +726,10 @@ public class UIManager_Streamlined : MonoBehaviour
             int playerCount = LobbyManager.Instance.GetPlayersInfo().Count;
             Debug.Log($"[UIManager_Streamlined] ? Rules found: {currentRules.GetRulesSummary()}");
 
-            // DICE RACE: Use NetworkGameManager directly (bypass CustomGameSpawner)
+            // DICE RACE: Use NetworkGameManager directly (standard games only)
             int gameType = currentGameInfo?.gameType ?? 0;
-            if (gameType == 3 || (currentGameInfo != null && currentGameInfo.gameName.Contains("Dice Race")))
+            bool isStandard = currentGameInfo?.isStandardGame ?? true;
+            if (isStandard && (gameType == 3 || (currentGameInfo != null && currentGameInfo.gameName.Contains("Dice Race"))))
             {
                 Debug.Log("[UIManager_Streamlined] Dice Race detected - using NetworkGameManager directly");
                 bool diceRaceSuccess = await StartDiceRaceGame(currentRules, playerCount);
@@ -1426,14 +1432,6 @@ public class UIManager_Streamlined : MonoBehaviour
     public void ShowGameModeSelectionPublic()
     {
         ShowSavedGamesPanel();
-    }
-    
-    /// <summary>
-    /// Hide all UIManager_Streamlined panels (called when game UI takes over)
-    /// </summary>
-    public void HideAllPanelsPublic()
-    {
-        HideAllPanels();
     }
     
     /// <summary>

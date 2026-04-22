@@ -141,16 +141,8 @@ public class BoardUIGenerator : MonoBehaviour
             return null;
         }
         
-        // Choose appropriate prefab
-        GameObject prefab = GetTilePrefab(tileData.tileType);
-        if (prefab == null)
-        {
-            Debug.LogError($"No prefab found for tile type: {tileData.tileType}");
-            return null;
-        }
-        
-        // Instantiate tile
-        GameObject tile = Instantiate(prefab, parent);
+        // Instantiate tile (falls back to a plain GameObject if no prefab is assigned)
+        GameObject tile = InstantiateTile(tileData.tileType, parent);
         tile.name = $"{tileData.tileName} ({tileData.tileId})";
         
         // Setup RectTransform
@@ -195,6 +187,22 @@ public class BoardUIGenerator : MonoBehaviour
             default:
                 return tilePrefab;
         }
+    }
+
+    /// <summary>
+    /// Returns an instantiated tile GameObject. Uses the assigned prefab when available,
+    /// otherwise creates a plain GameObject — all visuals are applied in code anyway.
+    /// </summary>
+    private GameObject InstantiateTile(string tileType, Transform parent)
+    {
+        GameObject prefab = GetTilePrefab(tileType);
+        if (prefab != null)
+            return Instantiate(prefab, parent);
+
+        // No prefab assigned — create a bare GameObject; visuals are added entirely in code.
+        GameObject go = new GameObject("Tile");
+        go.transform.SetParent(parent, false);
+        return go;
     }
     
     private void SetupTileTransform(GameObject tile, SerializableTileData data)

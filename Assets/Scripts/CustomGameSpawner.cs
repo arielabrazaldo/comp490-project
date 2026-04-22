@@ -71,15 +71,25 @@ public class CustomGameSpawner : MonoBehaviour
             return false;
         }
 
-        Debug.Log($"[CustomGameSpawner] Spawning game: {gameInfo.gameName} (Type: {gameInfo.gameType})");
+        Debug.Log($"[CustomGameSpawner] Spawning game: {gameInfo.gameName} (Type: {gameInfo.gameType}, Standard: {gameInfo.isStandardGame})");
 
-        // Spawn based on explicit game type - no analyzer needed
+        // Custom games always use HybridGameManager, regardless of their detected type.
+        // Only standard (built-in) games use their dedicated managers.
+        if (!gameInfo.isStandardGame)
+        {
+            Debug.Log("[CustomGameSpawner] Custom game detected - routing to HybridGameManager");
+            bool hybridSuccess = await SpawnHybridGame(gameInfo.rules, playerCount, gameInfo.gameName);
+            if (hybridSuccess) ApplyRulesToGame(gameInfo.rules);
+            return hybridSuccess;
+        }
+
+        // Spawn based on explicit game type - standard games only
         bool success = gameInfo.gameType switch
         {
             1 => await SpawnMonopolyGame(gameInfo.rules, playerCount),
             2 => await SpawnBattleshipsGame(gameInfo.rules, playerCount),
             3 => await SpawnDiceRaceGame(gameInfo.rules, playerCount),
-            _ => await SpawnHybridGame(gameInfo.rules, playerCount) // All custom/hybrid/unknown games
+            _ => await SpawnHybridGame(gameInfo.rules, playerCount)
         };
 
         if (success)
@@ -340,7 +350,7 @@ public class CustomGameSpawner : MonoBehaviour
     /// <summary>
     /// Spawn and configure a hybrid game (custom mix of game types)
     /// </summary>
-    private async Task<bool> SpawnHybridGame(GameRules rules, int playerCount)
+    private async Task<bool> SpawnHybridGame(GameRules rules, int playerCount, string gameName = "")
     {
         Debug.Log("[CustomGameSpawner] Spawning Hybrid game...");
         Debug.Log("[CustomGameSpawner] Using modular HybridGameManager for custom rules");
@@ -358,7 +368,7 @@ public class CustomGameSpawner : MonoBehaviour
         // Initialize hybrid game with custom rules
         if (HybridGameManager.Instance != null)
         {
-            HybridGameManager.Instance.InitializeGame(playerCount, rules);
+            HybridGameManager.Instance.InitializeGame(playerCount, rules, gameName);
             
             Debug.Log("[CustomGameSpawner] Hybrid game initialized with modular systems:");
             Debug.Log($"  - Currency: {rules.enableCurrency}");
@@ -390,7 +400,7 @@ public class CustomGameSpawner : MonoBehaviour
 
         // Search for prefab in network prefabs list
         GameObject prefab = FindNetworkPrefab<T>(unityNetworkManager);
-        
+
         if (prefab != null)
         {
             GameObject instance = Instantiate(prefab);
@@ -399,21 +409,15 @@ public class CustomGameSpawner : MonoBehaviour
             Debug.Log($"[CustomGameSpawner] Spawned {typeof(T).Name} from prefab");
             return true;
         }
-        else
-        {
-            // Fallback: Dynamic spawn
-            Debug.LogWarning($"[CustomGameSpawner] {typeof(T).Name} prefab not found, using dynamic spawn");
-            GameObject go = new GameObject(typeof(T).Name);
-            go.AddComponent<T>();
-            // Only add NetworkObject if the component doesn't already inherit one
-            NetworkObject networkObject = go.GetComponent<NetworkObject>();
-            if (networkObject == null)
-            {
-                networkObject = go.AddComponent<NetworkObject>();
-            }
-            networkObject.Spawn();
-            return true;
-        }
+
+        // Prefab not registered — dynamic runtime spawning produces hash=0 which clients
+        // cannot resolve. The prefab MUST be added to the NetworkManager's Network Prefabs list.
+        Debug.LogError(
+            $"[CustomGameSpawner] '{typeof(T).Name}' prefab is NOT registered in the Unity NetworkManager's " +
+            $"Network Prefabs list.\n" +
+            $"FIX: In the Unity Editor, select the NetworkManager GameObject ? find the 'Network Prefabs' list ? " +
+            $"add a prefab that has a '{typeof(T).Name}' component on its root GameObject.");
+        return false;
     }
 
     /// <summary>

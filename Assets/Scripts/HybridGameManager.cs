@@ -99,7 +99,7 @@ public class HybridGameManager : NetworkBehaviour
     /// <summary>
     /// Initialize hybrid game with custom rules
     /// </summary>
-    public void InitializeGame(int numPlayers, GameRules rules)
+    public void InitializeGame(int numPlayers, GameRules rules, string gameName = "")
     {
         if (!IsServer)
         {
@@ -121,7 +121,8 @@ public class HybridGameManager : NetworkBehaviour
         InitializePlayers(numPlayers);
 
         // Start game
-        StartGameClientRpc();
+        string rulesJson = JsonUtility.ToJson(rules);
+        StartGameClientRpc(rulesJson, gameName);
         
         gameState.Value = GameState.InProgress;
         OnGameStarted?.Invoke();
@@ -200,10 +201,31 @@ public class HybridGameManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void StartGameClientRpc()
+    private void StartGameClientRpc(string rulesJson, string gameName)
     {
         Debug.Log("[HybridGameManager] Game started on client");
+
+        // Sync rules and game info into RuleEditorManager so HybridUIManager can read them
+        if (!IsServer)
+        {
+            GameRules syncedRules = JsonUtility.FromJson<GameRules>(rulesJson);
+            if (syncedRules != null)
+            {
+                activeRules = syncedRules;
+                if (RuleEditorManager.Instance != null)
+                {
+                    var gameInfo = new SavedGameInfo(gameName, 3, playerCount.Value, syncedRules, isStandardGame: false);
+                    RuleEditorManager.Instance.SetCurrentGameInfo(gameInfo);
+                    RuleEditorManager.Instance.SetRules(syncedRules);
+                    Debug.Log($"[HybridGameManager] Client synced rules for '{gameName}'");
+                }
+            }
+        }
+
         OnGameStarted?.Invoke();
+
+        // Ensure UI knows game is in progress (NetworkVariable may not have synced yet on clients)
+        OnGameStateChanged?.Invoke(GameState.InProgress);
     }
 
     #endregion
@@ -329,14 +351,17 @@ public class HybridGameManager : NetworkBehaviour
     [ClientRpc]
     private void UpdateCurrentPlayerClientRpc(int newPlayerId)
     {
-        OnPlayerTurnChanged?.Invoke(newPlayerId);
+        if (!IsServer) OnPlayerTurnChanged?.Invoke(newPlayerId);
     }
 
     [ClientRpc]
     private void UpdatePlayerPositionClientRpc(int playerId, int newPosition, int diceRoll)
     {
-        OnPlayerMoved?.Invoke(playerId, newPosition);
-        OnGameMessage?.Invoke($"Player {playerId + 1} rolled {diceRoll} and moved to position {newPosition}");
+        if (!IsServer)
+        {
+            OnPlayerMoved?.Invoke(playerId, newPosition);
+            OnGameMessage?.Invoke($"Player {playerId + 1} rolled {diceRoll} and moved to position {newPosition}");
+        }
     }
 
     #endregion
@@ -466,7 +491,7 @@ public class HybridGameManager : NetworkBehaviour
     [ClientRpc]
     private void AnnounceWinnerClientRpc(int winnerId, string message)
     {
-        OnGameMessage?.Invoke(message);
+        if (!IsServer) OnGameMessage?.Invoke(message);
         Debug.Log($"[HybridGameManager] {message}");
     }
 
@@ -490,7 +515,7 @@ public class HybridGameManager : NetworkBehaviour
     [ClientRpc]
     private void BroadcastMessageClientRpc(string message)
     {
-        OnGameMessage?.Invoke(message);
+        if (!IsServer) OnGameMessage?.Invoke(message);
     }
 
     /// <summary>
@@ -515,6 +540,14 @@ public class HybridGameManager : NetworkBehaviour
     public int GetCurrentPlayerId()
     {
         return currentPlayerId.Value;
+    }
+
+    /// <summary>
+    /// Get total player count
+    /// </summary>
+    public int GetPlayerCount()
+    {
+        return playerCount.Value;
     }
 
     /// <summary>
