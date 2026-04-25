@@ -107,7 +107,9 @@ public class SerializableGameRules
     public bool lastPlayerStandingWins;
     public bool moneyThresholdWins;
     public int winningMoneyThreshold;
-    public int targetTileNumber; // NEW: Target tile for ReachSpecificTile win condition
+    public bool reachSpecificTileWins;
+    public int targetTileNumber;
+    public bool mustLandOnTargetTile;
 
     // Dice Mechanics
     public bool enableCustomDice;
@@ -157,7 +159,9 @@ public class SerializableGameRules
         lastPlayerStandingWins = rules.lastPlayerStandingWins;
         moneyThresholdWins = rules.moneyThresholdWins;
         winningMoneyThreshold = rules.winningMoneyThreshold;
-        targetTileNumber = rules.targetTileNumber; // NEW: Serialize target tile number
+        reachSpecificTileWins = rules.reachSpecificTileWins;
+        targetTileNumber = rules.targetTileNumber;
+        mustLandOnTargetTile = rules.mustLandOnTargetTile;
 
         enableCustomDice = rules.enableCustomDice;
         numberOfDice = rules.numberOfDice;
@@ -207,7 +211,9 @@ public class SerializableGameRules
             lastPlayerStandingWins = lastPlayerStandingWins,
             moneyThresholdWins = moneyThresholdWins,
             winningMoneyThreshold = winningMoneyThreshold,
-            targetTileNumber = targetTileNumber, // NEW: Deserialize target tile number
+            reachSpecificTileWins = reachSpecificTileWins,
+            targetTileNumber = targetTileNumber,
+            mustLandOnTargetTile = mustLandOnTargetTile,
 
             enableCustomDice = enableCustomDice,
             numberOfDice = numberOfDice,

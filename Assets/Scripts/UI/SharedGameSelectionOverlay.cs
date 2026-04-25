@@ -42,6 +42,12 @@ public class SharedGameSelectionOverlay : MonoBehaviour
     [SerializeField] private Button          returnToMenuButton;
     [SerializeField] private Button          continueEditingButton;
 
+    [Header("Warning Panel")]
+    [SerializeField] private GameObject      warningPanel;
+    [SerializeField] private TextMeshProUGUI warningMessageText;
+    [SerializeField] private Button          warningConfirmButton;
+    [SerializeField] private Button          warningCancelButton;
+
     // ?? runtime state ????????????????????????????????????????????????????
     private List<SavedGameInfo> customGamesList    = new List<SavedGameInfo>();
     private SavedGameInfo       selectedCustomGame = null;
@@ -53,6 +59,8 @@ public class SharedGameSelectionOverlay : MonoBehaviour
     private System.Action                onCancelled;               // user cancelled / closed
     private System.Action                onReturnToMenu;            // from confirmation panel
     private System.Action                onContinueEditing;         // from confirmation panel
+    private System.Action                onWarningConfirmed;        // from warning panel
+    private System.Action                onWarningCancelled;        // from warning panel
 
     // Background panel supplied by the active caller (overrides the serialized backgroundContent)
     private GameObject activeBackground = null;
@@ -163,6 +171,34 @@ public class SharedGameSelectionOverlay : MonoBehaviour
     }
 
     /// <summary>
+    /// Show a warning message asking the user to confirm a destructive action.
+    /// The overlay background is NOT hidden — the warning floats over the current view.
+    /// </summary>
+    /// <param name="message">Warning text to display.</param>
+    /// <param name="onConfirm">Called when user clicks Confirm.</param>
+    /// <param name="onCancel">Called when user clicks Cancel.</param>
+    public void OpenWarningPanel(string message, System.Action onConfirm, System.Action onCancel)
+    {
+        this.onWarningConfirmed = onConfirm;
+        this.onWarningCancelled = onCancel;
+
+        if (warningPanel == null)
+        {
+            Debug.LogError("[SharedGameSelectionOverlay] warningPanel is not assigned in the Inspector.");
+            return;
+        }
+
+        // Show only the warning panel; hide others but keep overlay root visible
+        if (customGameSelectionPanel != null) customGameSelectionPanel.SetActive(false);
+        if (namingPanel              != null) namingPanel.SetActive(false);
+        if (confirmationPanel        != null) confirmationPanel.SetActive(false);
+        if (overlayPanel             != null) overlayPanel.SetActive(true);
+
+        if (warningMessageText != null) warningMessageText.text = message;
+        warningPanel.SetActive(true);
+    }
+
+    /// <summary>
     /// Hide every overlay panel and restore the background content.
     /// </summary>
     public void HideAll()
@@ -171,6 +207,7 @@ public class SharedGameSelectionOverlay : MonoBehaviour
         if (customGameSelectionPanel != null) customGameSelectionPanel.SetActive(false);
         if (namingPanel              != null) namingPanel.SetActive(false);
         if (confirmationPanel        != null) confirmationPanel.SetActive(false);
+        if (warningPanel             != null) warningPanel.SetActive(false);
     }
 
     // ?? private helpers ??????????????????????????????????????????????????
@@ -193,6 +230,8 @@ public class SharedGameSelectionOverlay : MonoBehaviour
         cancelNameButton?.onClick.AddListener(OnCancelNameClicked);
         returnToMenuButton?.onClick.AddListener(OnReturnToMenuClicked);
         continueEditingButton?.onClick.AddListener(OnContinueEditingClicked);
+        warningConfirmButton?.onClick.AddListener(OnWarningConfirmClicked);
+        warningCancelButton?.onClick.AddListener(OnWarningCancelClicked);
     }
 
     private void RefreshList()
@@ -309,5 +348,17 @@ public class SharedGameSelectionOverlay : MonoBehaviour
     {
         HideAll();
         onContinueEditing?.Invoke();
+    }
+
+    private void OnWarningConfirmClicked()
+    {
+        HideAll();
+        onWarningConfirmed?.Invoke();
+    }
+
+    private void OnWarningCancelClicked()
+    {
+        HideAll();
+        onWarningCancelled?.Invoke();
     }
 }

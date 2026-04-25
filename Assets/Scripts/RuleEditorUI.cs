@@ -58,6 +58,9 @@ public class RuleEditorUI : MonoBehaviour
     [SerializeField] private Toggle moneyThresholdToggle;
     [SerializeField] private TMP_InputField winningMoneyInput;
     [SerializeField] private GameObject moneyThresholdPanel; // Shows when moneyThresholdToggle is ON
+    [SerializeField] private Toggle reachSpecificTileToggle;
+    [SerializeField] private GameObject targetTileDetailsPanel; // Shows when reachSpecificTileToggle is ON
+    [SerializeField] private Toggle mustLandOnTileToggle;
     
     [Header("Advanced Settings")]
     [SerializeField] private Toggle allowBankruptcyToggle;
@@ -181,6 +184,8 @@ public class RuleEditorUI : MonoBehaviour
             lastPlayerStandingWins = false,
             moneyThresholdWins = false,
             winningMoneyThreshold = 5000,
+            reachSpecificTileWins = false,
+            mustLandOnTargetTile = false,
             allowBankruptcy = false,
             allowTrading = false
         };
@@ -214,6 +219,11 @@ public class RuleEditorUI : MonoBehaviour
         if (resourceDetailsPanel != null)
         {
             resourceDetailsPanel.SetActive(false);
+        }
+        
+        if (targetTileDetailsPanel != null)
+        {
+            targetTileDetailsPanel.SetActive(false);
         }
         
         // Hide shared overlay (selection, naming, confirmation panels)
@@ -340,6 +350,16 @@ public class RuleEditorUI : MonoBehaviour
             winningMoneyInput.onEndEdit.AddListener(OnWinningMoneyChanged);
         }
         
+        if (reachSpecificTileToggle != null)
+        {
+            reachSpecificTileToggle.onValueChanged.AddListener(OnReachSpecificTileToggleChanged);
+        }
+        
+        if (mustLandOnTileToggle != null)
+        {
+            mustLandOnTileToggle.onValueChanged.AddListener(OnMustLandOnTileToggleChanged);
+        }
+        
         // Advanced settings
         if (allowBankruptcyToggle != null)
         {
@@ -413,6 +433,8 @@ public class RuleEditorUI : MonoBehaviour
         ActivateGameObject(moneyThresholdToggle);
         ActivateGameObject(allowBankruptcyToggle);
         ActivateGameObject(allowTradingToggle);
+        ActivateGameObject(reachSpecificTileToggle);
+        ActivateGameObject(mustLandOnTileToggle);
         
         // Ensure all input fields are active
         ActivateGameObject(startingMoneyInput);
@@ -597,6 +619,19 @@ public class RuleEditorUI : MonoBehaviour
         UpdateMoneyThresholdInteractability();
         UpdateMoneyThresholdPanel();
         
+        // Reach specific tile win condition
+        if (reachSpecificTileToggle != null)
+        {
+            reachSpecificTileToggle.isOn = currentRules.reachSpecificTileWins;
+        }
+        
+        if (mustLandOnTileToggle != null)
+        {
+            mustLandOnTileToggle.isOn = currentRules.mustLandOnTargetTile;
+        }
+        
+        UpdateTargetTilePanel();
+        
         // Advanced settings
         if (allowBankruptcyToggle != null)
         {
@@ -762,6 +797,46 @@ public class RuleEditorUI : MonoBehaviour
         {
             currentRules.winningMoneyThreshold = Mathf.Max(0, money);
             UpdateStatus($"Win threshold: ${currentRules.winningMoneyThreshold}");
+        }
+    }
+    
+    private void OnReachSpecificTileToggleChanged(bool value)
+    {
+        if (isInitializing) return;
+        
+        currentRules.reachSpecificTileWins = value;
+        if (value)
+        {
+            currentRules.winCondition = WinCondition.ReachSpecificTile;
+        }
+        else if (currentRules.winCondition == WinCondition.ReachSpecificTile)
+        {
+            // Fall back to the first remaining active win condition
+            currentRules.winCondition = currentRules.lastPlayerStandingWins
+                ? WinCondition.LastPlayerStanding
+                : currentRules.moneyThresholdWins
+                    ? WinCondition.MoneyThreshold
+                    : WinCondition.LastPlayerStanding;
+        }
+        
+        UpdateTargetTilePanel();
+        UpdateStatus(value ? "Reach specific tile victory enabled — designate the target tile in the Board Editor" : "Reach specific tile victory disabled");
+    }
+
+    private void OnMustLandOnTileToggleChanged(bool value)
+    {
+        if (isInitializing) return;
+        currentRules.mustLandOnTargetTile = value;
+        UpdateStatus(value ? "Goal tile: must land on exactly" : "Goal tile: passing through counts");
+    }
+
+    private void UpdateTargetTilePanel()
+    {
+        if (targetTileDetailsPanel != null)
+        {
+            bool shouldShow = currentRules.reachSpecificTileWins;
+            targetTileDetailsPanel.SetActive(shouldShow);
+            Debug.Log($"[RuleEditorUI] Target tile details panel: {(shouldShow ? "SHOWN" : "HIDDEN")}");
         }
     }
 
@@ -1512,6 +1587,16 @@ public class RuleEditorUI : MonoBehaviour
     public void ResetToDefaultStatePublic() => ResetToDefaultState();
 
     /// <summary>
+    /// Patches only targetTileNumber into currentRules without firing the full OnRulesChanged
+    /// event chain. Called by BoardEditorUI after the board is designed so the correct goal
+    /// tile index is baked into the rules that will be saved.
+    /// </summary>
+    public void PatchTargetTileNumber(int tileIndex)
+    {
+        currentRules.targetTileNumber = tileIndex;
+    }
+
+    /// <summary>
     /// Called by BoardEditorUI when a game is selected in the shared overlay.
     /// Loads the given rules into the editor and tracks selection state so
     /// a subsequent Apply will overwrite or create correctly.
@@ -1649,7 +1734,13 @@ public class RuleEditorUI : MonoBehaviour
         if (boardEditorUI != null)
         {
             if (ruleEditorPanel != null) ruleEditorPanel.SetActive(false);
-            boardEditorUI.ShowPanel();
+
+            // If we are editing a saved game, open the board editor pre-loaded with that game's board
+            if (isEditingExistingGame && selectedCustomGame != null)
+                boardEditorUI.ShowPanelForGame(selectedCustomGame, editExisting: true);
+            else
+                boardEditorUI.ShowPanel();
+
             Debug.Log("[RuleEditorUI] Switched to Board Editor");
         }
         else

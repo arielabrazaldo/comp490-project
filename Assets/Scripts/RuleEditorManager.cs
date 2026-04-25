@@ -155,6 +155,16 @@ public class RuleEditorManager : NetworkBehaviour
     }
     
     /// <summary>
+    /// Directly patches the stored rules without running full validation.
+    /// Use only for partial field updates (e.g., syncing targetTileNumber from the board editor).
+    /// </summary>
+    public void SetCurrentRulesDirectly(GameRules rules)
+    {
+        currentRules = rules.Clone();
+        OnRulesChanged?.Invoke(currentRules);
+    }
+    
+    /// <summary>
     /// Gets the current game info (if set)
     /// </summary>
     public SavedGameInfo GetCurrentGameInfo()

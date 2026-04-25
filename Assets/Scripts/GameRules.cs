@@ -53,7 +53,9 @@ public class GameRules
     public bool lastPlayerStandingWins = true;
     public bool moneyThresholdWins = false;
     public int winningMoneyThreshold = 5000;
-    public int targetTileNumber = 20; // NEW: Target tile for ReachSpecificTile win condition
+    public bool reachSpecificTileWins = false;
+    public int targetTileNumber = 20; // Target tile index for ReachSpecificTile win condition
+    public bool mustLandOnTargetTile = false; // true = must land exactly; false = passing through counts
     
     [Header("Dice Mechanics")]
     public bool enableCustomDice = false;
@@ -279,10 +281,10 @@ public class GameRules
         }
         
         // For ReachGoal win condition, lastPlayerStandingWins acts as "first to reach wins"
-        bool hasVictoryCondition = lastPlayerStandingWins || moneyThresholdWins || 
+        bool hasVictoryCondition = lastPlayerStandingWins || moneyThresholdWins || reachSpecificTileWins ||
                                    winCondition == WinCondition.ReachGoal ||
                                    winCondition == WinCondition.EliminateAllEnemies ||
-                                   winCondition == WinCondition.ReachSpecificTile; // NEW: Add ReachSpecificTile validation
+                                   winCondition == WinCondition.ReachSpecificTile;
 
         if (!hasVictoryCondition)
         {
@@ -291,7 +293,7 @@ public class GameRules
         }
         
         // NEW: Validate target tile number for ReachSpecificTile win condition
-        if (winCondition == WinCondition.ReachSpecificTile)
+        if (reachSpecificTileWins || winCondition == WinCondition.ReachSpecificTile)
         {
             if (targetTileNumber < 1)
             {
@@ -398,7 +400,9 @@ public class GameRules
             lastPlayerStandingWins = this.lastPlayerStandingWins,
             moneyThresholdWins = this.moneyThresholdWins,
             winningMoneyThreshold = this.winningMoneyThreshold,
-            targetTileNumber = this.targetTileNumber, // NEW: Clone target tile number
+            reachSpecificTileWins = this.reachSpecificTileWins,
+            targetTileNumber = this.targetTileNumber,
+            mustLandOnTargetTile = this.mustLandOnTargetTile,
             enableCustomDice = this.enableCustomDice,
             numberOfDice = this.numberOfDice,
             diceSides = this.diceSides,
