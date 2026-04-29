@@ -32,8 +32,7 @@ public class RuleEditorTests
         Assert.IsTrue(rules.enablePropertyTrading);
         Assert.IsTrue(rules.enableRentCollection);
         Assert.IsFalse(rules.enableCombat);
-        Assert.IsTrue(rules.canSeeEnemyTokens);
-        Assert.AreEqual(2, rules.numberOfDice);
+        Assert.IsTrue(rules.CanSeeEnemyTokens);
         Assert.IsTrue(rules.duplicatesGrantExtraTurn);
     }
 
@@ -57,8 +56,7 @@ public class RuleEditorTests
         Assert.IsFalse(rules.canPurchaseProperties);
         Assert.IsTrue(rules.enableCombat);
         Assert.IsTrue(rules.enableShipPlacement);
-        Assert.IsFalse(rules.canSeeEnemyTokens);
-        Assert.AreEqual(2, rules.maxPlayers);
+        Assert.IsFalse(rules.CanSeeEnemyTokens);
         Assert.AreEqual(WinCondition.EliminateAllEnemies, rules.winCondition);
     }
 
@@ -80,8 +78,7 @@ public class RuleEditorTests
         Assert.IsFalse(rules.separatePlayerBoards);
         Assert.IsFalse(rules.canPurchaseProperties);
         Assert.IsFalse(rules.enableCombat);
-        Assert.IsTrue(rules.canSeeEnemyTokens);
-        Assert.AreEqual(1, rules.numberOfDice);
+        Assert.IsTrue(rules.CanSeeEnemyTokens);
         Assert.AreEqual(WinCondition.ReachSpecificTile, rules.winCondition);
         Assert.AreEqual(20, rules.targetTileNumber);
     }

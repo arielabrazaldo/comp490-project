@@ -285,7 +285,7 @@ public class RuleEditorGameSaveIntegrationTests
         Assert.IsTrue(loadedGame.rules.separatePlayerBoards);
         Assert.IsTrue(loadedGame.rules.enableCombat);
         Assert.IsTrue(loadedGame.rules.enableShipPlacement);
-        Assert.IsFalse(loadedGame.rules.canSeeEnemyTokens);
+        Assert.IsFalse(loadedGame.rules.CanSeeEnemyTokens);
         Assert.AreEqual(WinCondition.EliminateAllEnemies, loadedGame.rules.winCondition);
     }
 

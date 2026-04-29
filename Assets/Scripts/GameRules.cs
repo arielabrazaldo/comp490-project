@@ -37,12 +37,23 @@ public class GameRules
     public bool enableBankruptcy = false; // Players can go bankrupt
     
     [Header("Combat System")]
-    public bool enableCombat = false; // Enable combat mechanics (Battleships)
-    public bool enableShipPlacement = false; // Enable ship placement phase (Battleships)
+    public bool enableCombat = false;           // Enable combat mechanics (Battleships)
+    public bool enableShipPlacement = false;    // Enable ship placement phase (Battleships)
+    // 0 = must land on opponent, 1 = adjacent tile, -1 = any tile (infinite)
+    // Infinite is only valid when separatePlayerBoards=true AND enableCustomDice=false
+    public int  combatRange = 0;
+    public bool useHitPoints = false;           // false = instant defeat
+    public int  defaultHitPoints = 10;
+    public bool useDiceRollDamage = false;      // false = static damage value
+    public int  staticDamage = 1;
+    public int  damageDiceCount = 1;
+    public int  damageDiceSides = 6;
+    public bool moveToDefeatedPosition = false; // Move to opponent's tile on their defeat
     
     [Header("Visibility Settings")]
-    public bool canSeeEnemyTokens = true; // false = hidden like Battleships, true = visible like Monopoly
-    public int enemyTokenVisibilityRange = -1; // -1 = unlimited, >0 = range in tiles
+    // Enemy token visibility is derived: tokens are hidden when separatePlayerBoards is true (Battleships-style).
+    // Enemy boards are always visible when separatePlayerBoards is true so players can target them.
+    public bool CanSeeEnemyTokens => !separatePlayerBoards;
     
     [Header("Player Settings")]
     public int minPlayers = 2;
@@ -93,8 +104,6 @@ public class GameRules
             enableBankruptcy = true,
             enableCombat = false,
             enableShipPlacement = false,
-            canSeeEnemyTokens = true, // All players visible
-            enemyTokenVisibilityRange = -1, // Unlimited visibility
             minPlayers = 2,
             maxPlayers = 4,
             winCondition = WinCondition.LastPlayerStanding,
@@ -133,8 +142,6 @@ public class GameRules
             enableBankruptcy = false,
             enableCombat = true,
             enableShipPlacement = true,
-            canSeeEnemyTokens = false, // Enemy ships hidden
-            enemyTokenVisibilityRange = 0, // No visibility
             minPlayers = 2,
             maxPlayers = 2,
             winCondition = WinCondition.EliminateAllEnemies,
@@ -173,8 +180,6 @@ public class GameRules
             enableBankruptcy = false,
             enableCombat = false,
             enableShipPlacement = false,
-            canSeeEnemyTokens = true, // All players visible
-            enemyTokenVisibilityRange = -1, // Unlimited visibility
             minPlayers = 2,
             maxPlayers = 4,
             winCondition = WinCondition.ReachSpecificTile,
@@ -216,8 +221,14 @@ public class GameRules
             enableBankruptcy = true,
             enableCombat = true,
             enableShipPlacement = false,
-            canSeeEnemyTokens = true, // Enable visibility
-            enemyTokenVisibilityRange = 5, // Set a limited range (not unlimited)
+            combatRange = 1,
+            useHitPoints = true,
+            defaultHitPoints = 10,
+            useDiceRollDamage = false,
+            staticDamage = 1,
+            damageDiceCount = 1,
+            damageDiceSides = 6,
+            moveToDefeatedPosition = false,
             minPlayers = 2,
             maxPlayers = 4,
             winCondition = WinCondition.LastPlayerStanding,
@@ -392,8 +403,14 @@ public class GameRules
             enableBankruptcy = this.enableBankruptcy,
             enableCombat = this.enableCombat,
             enableShipPlacement = this.enableShipPlacement,
-            canSeeEnemyTokens = this.canSeeEnemyTokens,
-            enemyTokenVisibilityRange = this.enemyTokenVisibilityRange,
+            combatRange = this.combatRange,
+            useHitPoints = this.useHitPoints,
+            defaultHitPoints = this.defaultHitPoints,
+            useDiceRollDamage = this.useDiceRollDamage,
+            staticDamage = this.staticDamage,
+            damageDiceCount = this.damageDiceCount,
+            damageDiceSides = this.damageDiceSides,
+            moveToDefeatedPosition = this.moveToDefeatedPosition,
             minPlayers = this.minPlayers,
             maxPlayers = this.maxPlayers,
             winCondition = this.winCondition,
@@ -428,16 +445,9 @@ public class GameRules
         summary += $"- Board: {(separatePlayerBoards ? "Separate (Battleships-style)" : "Shared (Monopoly-style)")} [{tilesPerSide} tiles]\n";
         summary += $"- Properties: {(canPurchaseProperties ? "Enabled" : "Disabled")}\n";
         summary += $"- Combat: {(enableCombat ? "Enabled" : "Disabled")}\n";
-        
-        if (canSeeEnemyTokens)
-        {
-            string range = enemyTokenVisibilityRange == -1 ? "unlimited" : $"{enemyTokenVisibilityRange} tiles";
-            summary += $"- Visibility: Visible ({range})\n";
-        }
-        else
-        {
-            summary += "- Visibility: Hidden (Fog of War)\n";
-        }
+
+        bool seeTokens = CanSeeEnemyTokens;
+        summary += seeTokens ? "- Visibility: Enemy tokens visible (shared board)\n" : "- Visibility: Enemy tokens hidden, boards visible (separate boards)\n";
         
         summary += $"- Players: {minPlayers}-{maxPlayers}\n";
         summary += $"- Win Condition: {winCondition}";

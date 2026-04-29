@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
@@ -25,12 +25,6 @@ public class RuleEditorUI : MonoBehaviour
     [Header("Board Settings")]
     [SerializeField] private Toggle separateBoardsToggle;
     [SerializeField] private TextMeshProUGUI boardModeLabel;
-    
-    [Header("Visibility Settings")]
-    [SerializeField] private Toggle enemyVisibilityToggle;
-    [SerializeField] private Slider visibilityRangeSlider;
-    [SerializeField] private TextMeshProUGUI visibilityRangeLabel;
-    [SerializeField] private GameObject visibilityDetailsPanel; // Shows when enemyVisibilityToggle is ON
     
     [Header("Player Settings")]
     [SerializeField] private TMP_InputField minPlayersInput;
@@ -65,6 +59,17 @@ public class RuleEditorUI : MonoBehaviour
     [Header("Advanced Settings")]
     [SerializeField] private Toggle allowBankruptcyToggle;
     [SerializeField] private Toggle allowTradingToggle;
+
+    [Header("Combat Settings")]
+    [SerializeField] private Toggle          combatToggle;
+    [SerializeField] private GameObject      combatDetailsPanel;      // Shown in advancedSettingsScrollview when combat is ON
+    [SerializeField] private TMP_Dropdown    combatRangeDropdown;     // 0 = land on, 1 = adjacent, 2 = infinite
+    [SerializeField] private Toggle          useHpToggle;             // false = instant defeat
+    [SerializeField] private GameObject      hpDetailsPanel;          // Shown when useHpToggle is ON
+    [SerializeField] private TMP_InputField  defaultHpInput;
+    [SerializeField] private Toggle          useDiceRollDamageToggle; // false = static damage
+    [SerializeField] private TMP_InputField  staticDamageInput;       // Reused: plain int for static, "min - max" for dice
+    [SerializeField] private Toggle          moveToDefeatedPositionToggle;
     
     [Header("Presets")]
     [SerializeField] private Button monopolyPresetButton;
@@ -167,8 +172,6 @@ public class RuleEditorUI : MonoBehaviour
             startingMoney = 1500,
             passGoBonus = 200,
             separatePlayerBoards = false,
-            canSeeEnemyTokens = false,
-            enemyTokenVisibilityRange = -1,
             minPlayers = 2,
             maxPlayers = 4,
             enableCustomDice = false,
@@ -187,7 +190,16 @@ public class RuleEditorUI : MonoBehaviour
             reachSpecificTileWins = false,
             mustLandOnTargetTile = false,
             allowBankruptcy = false,
-            allowTrading = false
+            allowTrading = false,
+            enableCombat = false,
+            combatRange = 0,
+            useHitPoints = false,
+            defaultHitPoints = 10,
+            useDiceRollDamage = false,
+            staticDamage = 1,
+            damageDiceCount = 1,
+            damageDiceSides = 6,
+            moveToDefeatedPosition = false
         };
     }
 
@@ -199,11 +211,6 @@ public class RuleEditorUI : MonoBehaviour
         if (currencyDetailsPanel != null)
         {
             currencyDetailsPanel.SetActive(false);
-        }
-        
-        if (visibilityDetailsPanel != null)
-        {
-            visibilityDetailsPanel.SetActive(false);
         }
         
         if (moneyThresholdPanel != null)
@@ -225,6 +232,13 @@ public class RuleEditorUI : MonoBehaviour
         {
             targetTileDetailsPanel.SetActive(false);
         }
+
+        if (combatDetailsPanel != null)
+            combatDetailsPanel.SetActive(false);
+
+        if (hpDetailsPanel != null)
+            hpDetailsPanel.SetActive(false);
+
         
         // Hide shared overlay (selection, naming, confirmation panels)
         if (sharedOverlay != null)
@@ -263,17 +277,6 @@ public class RuleEditorUI : MonoBehaviour
         if (separateBoardsToggle != null)
         {
             separateBoardsToggle.onValueChanged.AddListener(OnSeparateBoardsChanged);
-        }
-        
-        // Visibility
-        if (enemyVisibilityToggle != null)
-        {
-            enemyVisibilityToggle.onValueChanged.AddListener(OnEnemyVisibilityToggleChanged);
-        }
-        
-        if (visibilityRangeSlider != null)
-        {
-            visibilityRangeSlider.onValueChanged.AddListener(OnVisibilityRangeChanged);
         }
         
         // Player settings
@@ -400,6 +403,15 @@ public class RuleEditorUI : MonoBehaviour
         
         // Shared overlay button wiring is handled inside SharedGameSelectionOverlay itself.
 
+        // Combat settings
+        combatToggle?.onValueChanged.AddListener(OnCombatToggleChanged);
+        combatRangeDropdown?.onValueChanged.AddListener(OnCombatRangeChanged);
+        useHpToggle?.onValueChanged.AddListener(OnUseHpToggleChanged);
+        defaultHpInput?.onEndEdit.AddListener(OnDefaultHpChanged);
+        useDiceRollDamageToggle?.onValueChanged.AddListener(OnUseDiceRollDamageToggleChanged);
+        staticDamageInput?.onEndEdit.AddListener(OnStaticDamageChanged);
+        moveToDefeatedPositionToggle?.onValueChanged.AddListener(OnMoveToDefeatedPositionChanged);
+
         // Navigation
         if (goToBoardEditorButton != null)
         {
@@ -424,7 +436,6 @@ public class RuleEditorUI : MonoBehaviour
         // Ensure all toggles are active
         ActivateGameObject(currencyToggle);
         ActivateGameObject(separateBoardsToggle);
-        ActivateGameObject(enemyVisibilityToggle);
         ActivateGameObject(customDiceToggle);
         ActivateGameObject(duplicatesExtraTurnToggle);
         ActivateGameObject(resourcesToggle);
@@ -433,6 +444,10 @@ public class RuleEditorUI : MonoBehaviour
         ActivateGameObject(moneyThresholdToggle);
         ActivateGameObject(allowBankruptcyToggle);
         ActivateGameObject(allowTradingToggle);
+        ActivateGameObject(combatToggle);
+        ActivateGameObject(useHpToggle);
+        ActivateGameObject(useDiceRollDamageToggle);
+        ActivateGameObject(moveToDefeatedPositionToggle);
         ActivateGameObject(reachSpecificTileToggle);
         ActivateGameObject(mustLandOnTileToggle);
         
@@ -448,9 +463,6 @@ public class RuleEditorUI : MonoBehaviour
         ActivateGameObject(maxResourcesInput);
         ActivateGameObject(winningMoneyInput);
         
-        // Ensure slider is active
-        ActivateGameObject(visibilityRangeSlider);
-        
         // Ensure all buttons are active
         ActivateGameObject(closeButton);
         ActivateGameObject(monopolyPresetButton);
@@ -461,7 +473,6 @@ public class RuleEditorUI : MonoBehaviour
         
         // Ensure all labels are active
         ActivateGameObject(boardModeLabel);
-        ActivateGameObject(visibilityRangeLabel);
         ActivateGameObject(statusText);
         
         Debug.Log("[RuleEditorUI] Main UI elements activated (detail panels hidden by default)");
@@ -511,28 +522,6 @@ public class RuleEditorUI : MonoBehaviour
         }
         
         UpdateBoardModeLabel();
-        
-        // Visibility
-        if (enemyVisibilityToggle != null)
-        {
-            enemyVisibilityToggle.isOn = currentRules.canSeeEnemyTokens;
-        }
-        
-        if (visibilityRangeSlider != null)
-        {
-            // Slider: 0 = unlimited (-1), 1-20 = range
-            if (currentRules.enemyTokenVisibilityRange == -1)
-            {
-                visibilityRangeSlider.value = 0;
-            }
-            else
-            {
-                visibilityRangeSlider.value = Mathf.Clamp(currentRules.enemyTokenVisibilityRange, 1, 20);
-            }
-        }
-        
-        UpdateVisibilityPanel();
-        UpdateVisibilityRangeLabel();
         
         // Player settings
         if (minPlayersInput != null)
@@ -642,7 +631,28 @@ public class RuleEditorUI : MonoBehaviour
         {
             allowTradingToggle.isOn = currentRules.allowTrading;
         }
-        
+
+        // Combat settings
+        if (combatToggle != null)
+            combatToggle.isOn = currentRules.enableCombat;
+        if (useHpToggle != null)
+            useHpToggle.isOn = currentRules.useHitPoints;
+        if (defaultHpInput != null)
+            defaultHpInput.text = currentRules.defaultHitPoints.ToString();
+        if (useDiceRollDamageToggle != null)
+            useDiceRollDamageToggle.isOn = currentRules.useDiceRollDamage;
+        if (staticDamageInput != null)
+        {
+            staticDamageInput.text = currentRules.useDiceRollDamage
+                ? $"{currentRules.damageDiceCount} - {currentRules.damageDiceSides}"
+                : currentRules.staticDamage.ToString();
+            UpdateDamageInputPlaceholder(currentRules.useDiceRollDamage);
+        }
+        if (moveToDefeatedPositionToggle != null)
+            moveToDefeatedPositionToggle.isOn = currentRules.moveToDefeatedPosition;
+        UpdateCombatPanel();
+        UpdateCombatRangeDropdown();
+
         isInitializing = false;
     }
 
@@ -691,35 +701,8 @@ public class RuleEditorUI : MonoBehaviour
         
         currentRules.separatePlayerBoards = value;
         UpdateBoardModeLabel();
+        UpdateCombatRangeDropdown();
         UpdateStatus(value ? "Separate player boards (Battleships-style)" : "Shared board (Monopoly-style)");
-    }
-    
-    private void OnEnemyVisibilityToggleChanged(bool value)
-    {
-        if (isInitializing) return;
-        
-        currentRules.canSeeEnemyTokens = value;
-        UpdateVisibilityPanel(); // Show/hide panel dynamically
-        
-        string status = value ? "Enemy tokens visible - range panel shown" : "Fog of War enabled - panel hidden";
-        UpdateStatus(status);
-    }
-    
-    private void OnVisibilityRangeChanged(float value)
-    {
-        if (isInitializing) return;
-        
-        // Slider: 0 = unlimited, 1-20 = range
-        if (value == 0)
-        {
-            currentRules.enemyTokenVisibilityRange = -1;
-        }
-        else
-        {
-            currentRules.enemyTokenVisibilityRange = Mathf.RoundToInt(value);
-        }
-        
-        UpdateVisibilityRangeLabel();
     }
     
     private void OnMinPlayersChanged(string value)
@@ -820,7 +803,7 @@ public class RuleEditorUI : MonoBehaviour
         }
         
         UpdateTargetTilePanel();
-        UpdateStatus(value ? "Reach specific tile victory enabled — designate the target tile in the Board Editor" : "Reach specific tile victory disabled");
+        UpdateStatus(value ? "Reach specific tile victory enabled ï¿½ designate the target tile in the Board Editor" : "Reach specific tile victory disabled");
     }
 
     private void OnMustLandOnTileToggleChanged(bool value)
@@ -848,6 +831,7 @@ public class RuleEditorUI : MonoBehaviour
         
         currentRules.enableCustomDice = value;
         UpdateDicePanel();
+        UpdateCombatRangeDropdown();
         
         string status = value ? "Custom dice enabled - dice panel shown" : "Custom dice disabled - dice panel hidden";
         UpdateStatus(status);
@@ -1066,7 +1050,7 @@ public class RuleEditorUI : MonoBehaviour
         if (boardEditorUI != null)
             boardEditorUI.SaveCurrentBoard(savedGameName);
         else
-            Debug.LogWarning("[RuleEditorUI] BoardEditorUI not found — board not saved alongside rules.");
+            Debug.LogWarning("[RuleEditorUI] BoardEditorUI not found ï¿½ board not saved alongside rules.");
 
         bool wasOverwrite = isEditingExistingGame;
         isEditingExistingGame = false;
@@ -1170,35 +1154,6 @@ public class RuleEditorUI : MonoBehaviour
         {
             string mode = currentRules.separatePlayerBoards ? "Separate Boards (Battleships-style)" : "Shared Board (Monopoly-style)";
             boardModeLabel.text = mode;
-        }
-    }
-    
-    /// <summary>
-    /// DYNAMIC: Show visibility panel ONLY when toggle is ON
-    /// </summary>
-    private void UpdateVisibilityPanel()
-    {
-        if (visibilityDetailsPanel != null)
-        {
-            bool shouldShow = currentRules.canSeeEnemyTokens;
-            visibilityDetailsPanel.SetActive(shouldShow);
-            
-            Debug.Log($"[RuleEditorUI] Visibility panel: {(shouldShow ? "SHOWN" : "HIDDEN")}");
-        }
-    }
-    
-    private void UpdateVisibilityRangeLabel()
-    {
-        if (visibilityRangeLabel != null)
-        {
-            if (currentRules.enemyTokenVisibilityRange == -1)
-            {
-                visibilityRangeLabel.text = "Range: Unlimited";
-            }
-            else
-            {
-                visibilityRangeLabel.text = $"Range: {currentRules.enemyTokenVisibilityRange} tiles";
-            }
         }
     }
     
@@ -1333,6 +1288,181 @@ public class RuleEditorUI : MonoBehaviour
             Debug.Log($"[RuleEditorUI] Max resources input: {(shouldEnable ? "ENABLED" : "DISABLED")}");
         }
     }
+
+    // ?? Combat ????????????????????????????????????????????????????????????????
+
+    private void OnCombatToggleChanged(bool value)
+    {
+        if (isInitializing) return;
+        currentRules.enableCombat = value;
+        UpdateCombatPanel();
+        UpdateCombatRangeDropdown();
+        UpdateStatus(value ? "Combat enabled" : "Combat disabled");
+    }
+
+    private void OnCombatRangeChanged(int dropdownIndex)
+    {
+        if (isInitializing) return;
+        // Dropdown: 0?range 0, 1?range 1, 2?range -1 (infinite)
+        int[] map = { 0, 1, -1 };
+        currentRules.combatRange = map[Mathf.Clamp(dropdownIndex, 0, map.Length - 1)];
+        UpdateStatus("Combat range: " + CombatRangeLabel(currentRules.combatRange));
+    }
+
+    private void OnUseHpToggleChanged(bool value)
+    {
+        if (isInitializing) return;
+        currentRules.useHitPoints = value;
+        UpdateHpPanel();
+        UpdateStatus(value ? "HP enabled" : "Instant defeat");
+    }
+
+    private void OnDefaultHpChanged(string value)
+    {
+        if (isInitializing) return;
+        if (int.TryParse(value, out int hp))
+        {
+            currentRules.defaultHitPoints = Mathf.Max(1, hp);
+            if (defaultHpInput != null) defaultHpInput.text = currentRules.defaultHitPoints.ToString();
+            UpdateStatus("Default HP: " + currentRules.defaultHitPoints);
+        }
+    }
+
+    private void OnUseDiceRollDamageToggleChanged(bool value)
+    {
+        if (isInitializing) return;
+        currentRules.useDiceRollDamage = value;
+        UpdateDamageInputPlaceholder(value);
+        if (staticDamageInput != null)
+        {
+            staticDamageInput.text = value
+                ? $"{currentRules.damageDiceCount} - {currentRules.damageDiceSides}"
+                : currentRules.staticDamage.ToString();
+        }
+        UpdateDamageRollPanel();
+        UpdateStatus(value ? "Damage: dice roll (enter min - max)" : "Damage: static");
+    }
+
+    private void OnStaticDamageChanged(string value)
+    {
+        if (isInitializing) return;
+        if (currentRules.useDiceRollDamage)
+        {
+            // Expect "x - y" format
+            string[] parts = value.Split('-');
+            if (parts.Length == 2 &&
+                int.TryParse(parts[0].Trim(), out int minDmg) &&
+                int.TryParse(parts[1].Trim(), out int maxDmg))
+            {
+                currentRules.damageDiceCount = Mathf.Max(0, minDmg);
+                currentRules.damageDiceSides = Mathf.Max(currentRules.damageDiceCount, maxDmg);
+                if (staticDamageInput != null)
+                    staticDamageInput.text = $"{currentRules.damageDiceCount} - {currentRules.damageDiceSides}";
+                UpdateStatus($"Damage range: {currentRules.damageDiceCount} - {currentRules.damageDiceSides}");
+            }
+            else
+            {
+                // Bad format ï¿½ restore previous value
+                if (staticDamageInput != null)
+                    staticDamageInput.text = $"{currentRules.damageDiceCount} - {currentRules.damageDiceSides}";
+                UpdateStatus("Invalid format ï¿½ use \"min - max\" (e.g. 1 - 6)");
+            }
+        }
+        else
+        {
+            if (int.TryParse(value, out int dmg))
+            {
+                currentRules.staticDamage = Mathf.Max(0, dmg);
+                if (staticDamageInput != null) staticDamageInput.text = currentRules.staticDamage.ToString();
+                UpdateStatus("Static damage: " + currentRules.staticDamage);
+            }
+        }
+    }
+
+    private void OnMoveToDefeatedPositionChanged(bool value)
+    {
+        if (isInitializing) return;
+        currentRules.moveToDefeatedPosition = value;
+        UpdateStatus(value ? "Move to defeated opponent's tile: ON" : "Move to defeated opponent's tile: OFF");
+    }
+
+    /// <summary>Show/hide the combat details panel based on the combat toggle.</summary>
+    private void UpdateCombatPanel()
+    {
+        if (combatDetailsPanel != null)
+            combatDetailsPanel.SetActive(currentRules.enableCombat);
+        UpdateHpPanel();
+        UpdateDamageRollPanel();
+    }
+
+    /// <summary>Show/hide the HP input panel based on the useHitPoints toggle.</summary>
+    private void UpdateHpPanel()
+    {
+        if (hpDetailsPanel != null)
+            hpDetailsPanel.SetActive(currentRules.enableCombat && currentRules.useHitPoints);
+        if (defaultHpInput != null)
+            defaultHpInput.interactable = currentRules.enableCombat && currentRules.useHitPoints;
+    }
+
+    /// <summary>Updates interactability of the shared damage input field.</summary>
+    private void UpdateDamageRollPanel()
+    {
+        if (staticDamageInput != null)
+            staticDamageInput.interactable = currentRules.enableCombat;
+    }
+
+    private void UpdateDamageInputPlaceholder(bool isDiceMode)
+    {
+        if (staticDamageInput == null) return;
+        if (staticDamageInput.placeholder is TextMeshProUGUI placeholder)
+            placeholder.text = isDiceMode ? "min - max  (e.g. 1 - 6)" : "Damage";
+    }
+
+    /// <summary>
+    /// Rebuilds the combat range dropdown.
+    /// "Any Tile (Infinite)" is only selectable when separatePlayerBoards is ON and enableCustomDice is OFF.
+    /// </summary>
+    private void UpdateCombatRangeDropdown()
+    {
+        if (combatRangeDropdown == null) return;
+
+        bool infiniteAllowed = currentRules.separatePlayerBoards && !currentRules.enableCustomDice;
+
+        // If infinite was selected but is no longer allowed, reset to 0
+        if (currentRules.combatRange == -1 && !infiniteAllowed)
+        {
+            currentRules.combatRange = 0;
+            UpdateStatus("Infinite combat range requires Separate Boards and no custom dice");
+        }
+
+        isInitializing = true;
+        combatRangeDropdown.ClearOptions();
+        combatRangeDropdown.AddOptions(new System.Collections.Generic.List<string>
+        {
+            "Must Land On (0)",
+            "Adjacent Tile (1)",
+            "Infinite",
+        });
+
+        // Map combatRange value to dropdown index
+        int idx = currentRules.combatRange == -1 ? 2 : currentRules.combatRange;
+        combatRangeDropdown.SetValueWithoutNotify(Mathf.Clamp(idx, 0, 2));
+        isInitializing = false;
+
+        // Disable the infinite option if conditions aren't met
+        var infiniteItem = combatRangeDropdown.options[2];
+        // Interactable flag is per-dropdown only; visually grey out via alpha on the item template
+        // The guard in OnCombatRangeChanged prevents saving an invalid value.
+        combatRangeDropdown.interactable = currentRules.enableCombat;
+    }
+
+    private static string CombatRangeLabel(int range) => range switch
+    {
+        0  => "Must land on opponent",
+        1  => "Adjacent tile",
+        -1 => "Any tile (Infinite)",
+        _  => range.ToString(),
+    };
     
     /// <summary>
     /// Dynamically generates resource name input fields based on numberOfResources
@@ -1737,7 +1867,7 @@ public class RuleEditorUI : MonoBehaviour
 
             // If we are editing a saved game, open the board editor pre-loaded with that game's board
             if (isEditingExistingGame && selectedCustomGame != null)
-                boardEditorUI.ShowPanelForGame(selectedCustomGame, editExisting: true);
+                boardEditorUI.ShowPanelForGame(selectedCustomGame, editExisting: true, syncRules: false);
             else
                 boardEditorUI.ShowPanel();
 

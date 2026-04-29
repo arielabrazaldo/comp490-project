@@ -34,14 +34,11 @@ public class RuleEditorManager : NetworkBehaviour
     private NetworkVariable<int> networkStartingMoney = new NetworkVariable<int>(1500);
     private NetworkVariable<int> networkPassGoBonus = new NetworkVariable<int>(200);
     private NetworkVariable<bool> networkSeparateBoards = new NetworkVariable<bool>(false);
-    private NetworkVariable<bool> networkCanSeeEnemies = new NetworkVariable<bool>(true);
-    private NetworkVariable<int> networkVisibilityRange = new NetworkVariable<int>(-1);
 
     // Events
     public static event Action<GameRules> OnRulesChanged;
     public static event Action<bool> OnCurrencyToggled;
     public static event Action<bool> OnSeparateBoardsToggled;
-    public static event Action<bool, int> OnEnemyVisibilityChanged;
 
     public enum RulePreset
     {
@@ -92,7 +89,6 @@ public class RuleEditorManager : NetworkBehaviour
             // Clients subscribe to network variable changes
             networkEnableCurrency.OnValueChanged += OnNetworkCurrencyChanged;
             networkSeparateBoards.OnValueChanged += OnNetworkSeparateBoardsChanged;
-            networkCanSeeEnemies.OnValueChanged += OnNetworkEnemyVisibilityChanged;
             
             // Apply initial values from server
             SyncFromNetwork();
@@ -105,7 +101,6 @@ public class RuleEditorManager : NetworkBehaviour
         {
             networkEnableCurrency.OnValueChanged -= OnNetworkCurrencyChanged;
             networkSeparateBoards.OnValueChanged -= OnNetworkSeparateBoardsChanged;
-            networkCanSeeEnemies.OnValueChanged -= OnNetworkEnemyVisibilityChanged;
         }
         
         base.OnNetworkDespawn();
@@ -136,9 +131,7 @@ public class RuleEditorManager : NetworkBehaviour
                 rules.enableCurrency,
                 rules.startingMoney,
                 rules.passGoBonus,
-                rules.separatePlayerBoards,
-                rules.canSeeEnemyTokens,
-                rules.enemyTokenVisibilityRange
+                rules.separatePlayerBoards
             );
         }
         
@@ -238,27 +231,6 @@ public class RuleEditorManager : NetworkBehaviour
         OnSeparateBoardsToggled?.Invoke(enabled);
     }
     
-    /// <summary>
-    /// Set enemy token visibility
-    /// </summary>
-    public void SetEnemyVisibility(bool canSee, int range = -1)
-    {
-        currentRules.canSeeEnemyTokens = canSee;
-        currentRules.enemyTokenVisibilityRange = range;
-        
-        if (IsServer)
-        {
-            networkCanSeeEnemies.Value = canSee;
-            networkVisibilityRange.Value = range;
-        }
-        else if (IsClient)
-        {
-            RequestSetEnemyVisibilityServerRpc(canSee, range);
-        }
-        
-        OnEnemyVisibilityChanged?.Invoke(canSee, range);
-    }
-
     #endregion
 
     #region Query Methods
@@ -267,8 +239,7 @@ public class RuleEditorManager : NetworkBehaviour
     public int GetStartingMoney() => currentRules.startingMoney;
     public int GetPassGoBonus() => currentRules.passGoBonus;
     public bool UseSeparateBoards() => currentRules.separatePlayerBoards;
-    public bool CanSeeEnemyTokens() => currentRules.canSeeEnemyTokens;
-    public int GetEnemyTokenVisibilityRange() => currentRules.enemyTokenVisibilityRange;
+    public bool CanSeeEnemyTokens() => currentRules.CanSeeEnemyTokens;
     public bool AllowsBankruptcy() => currentRules.allowBankruptcy;
     public bool AllowsTrading() => currentRules.allowTrading;
 
@@ -282,16 +253,12 @@ public class RuleEditorManager : NetworkBehaviour
         networkStartingMoney.Value = currentRules.startingMoney;
         networkPassGoBonus.Value = currentRules.passGoBonus;
         networkSeparateBoards.Value = currentRules.separatePlayerBoards;
-        networkCanSeeEnemies.Value = currentRules.canSeeEnemyTokens;
-        networkVisibilityRange.Value = currentRules.enemyTokenVisibilityRange;
         
         BroadcastRulesChangedClientRpc(
             currentRules.enableCurrency,
             currentRules.startingMoney,
             currentRules.passGoBonus,
-            currentRules.separatePlayerBoards,
-            currentRules.canSeeEnemyTokens,
-            currentRules.enemyTokenVisibilityRange
+            currentRules.separatePlayerBoards
         );
     }
     
@@ -301,8 +268,6 @@ public class RuleEditorManager : NetworkBehaviour
         currentRules.startingMoney = networkStartingMoney.Value;
         currentRules.passGoBonus = networkPassGoBonus.Value;
         currentRules.separatePlayerBoards = networkSeparateBoards.Value;
-        currentRules.canSeeEnemyTokens = networkCanSeeEnemies.Value;
-        currentRules.enemyTokenVisibilityRange = networkVisibilityRange.Value;
         
         OnRulesChanged?.Invoke(currentRules);
     }
@@ -324,28 +289,19 @@ public class RuleEditorManager : NetworkBehaviour
         OnSeparateBoardsToggled?.Invoke(newValue);
         OnRulesChanged?.Invoke(currentRules);
     }
-    
-    private void OnNetworkEnemyVisibilityChanged(bool oldValue, bool newValue)
-    {
-        currentRules.canSeeEnemyTokens = newValue;
-        OnEnemyVisibilityChanged?.Invoke(newValue, currentRules.enemyTokenVisibilityRange);
-        OnRulesChanged?.Invoke(currentRules);
-    }
 
     #endregion
 
     #region Server RPCs
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestSetRulesServerRpc(bool enableCurrency, int startingMoney, int passGoBonus, 
-        bool separateBoards, bool canSeeEnemies, int visibilityRange)
+    private void RequestSetRulesServerRpc(bool enableCurrency, int startingMoney, int passGoBonus,
+        bool separateBoards)
     {
         currentRules.enableCurrency = enableCurrency;
         currentRules.startingMoney = startingMoney;
         currentRules.passGoBonus = passGoBonus;
         currentRules.separatePlayerBoards = separateBoards;
-        currentRules.canSeeEnemyTokens = canSeeEnemies;
-        currentRules.enemyTokenVisibilityRange = visibilityRange;
         
         SyncToNetwork();
     }
@@ -365,16 +321,6 @@ public class RuleEditorManager : NetworkBehaviour
         currentRules.separatePlayerBoards = enabled;
         OnSeparateBoardsToggled?.Invoke(enabled);
     }
-    
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestSetEnemyVisibilityServerRpc(bool canSee, int range)
-    {
-        networkCanSeeEnemies.Value = canSee;
-        networkVisibilityRange.Value = range;
-        currentRules.canSeeEnemyTokens = canSee;
-        currentRules.enemyTokenVisibilityRange = range;
-        OnEnemyVisibilityChanged?.Invoke(canSee, range);
-    }
 
     #endregion
 
@@ -382,16 +328,14 @@ public class RuleEditorManager : NetworkBehaviour
 
     [ClientRpc]
     private void BroadcastRulesChangedClientRpc(bool enableCurrency, int startingMoney, int passGoBonus,
-        bool separateBoards, bool canSeeEnemies, int visibilityRange)
+        bool separateBoards)
     {
-        if (IsServer) return; // Server already has the rules
+        if (IsServer) return;
         
         currentRules.enableCurrency = enableCurrency;
         currentRules.startingMoney = startingMoney;
         currentRules.passGoBonus = passGoBonus;
         currentRules.separatePlayerBoards = separateBoards;
-        currentRules.canSeeEnemyTokens = canSeeEnemies;
-        currentRules.enemyTokenVisibilityRange = visibilityRange;
         
         OnRulesChanged?.Invoke(currentRules);
     }

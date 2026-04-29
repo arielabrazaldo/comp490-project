@@ -117,7 +117,7 @@ public class CustomGameAnalyzer : MonoBehaviour
         // Monopoly characteristics
         if (rules.enableCurrency) { score += 1f; checks++; }           // Currency is essential
         if (!rules.separatePlayerBoards) { score += 1f; checks++; }    // Shared board
-        if (rules.canSeeEnemyTokens) { score += 1f; checks++; }        // All players visible
+        if (rules.CanSeeEnemyTokens) { score += 1f; checks++; }         // All players visible
         if (rules.canPurchaseProperties) { score += 1f; checks++; }    // Property buying
         if (rules.enablePropertyTrading) { score += 1f; checks++; }    // Property trading
         if (rules.startingMoney > 0) { score += 0.5f; checks++; }      // Has starting money
@@ -137,7 +137,7 @@ public class CustomGameAnalyzer : MonoBehaviour
 
         // Battleships characteristics
         if (rules.separatePlayerBoards) { score += 1f; checks++; }     // Separate boards
-        if (!rules.canSeeEnemyTokens) { score += 1f; checks++; }       // Hidden enemy pieces
+        if (!rules.CanSeeEnemyTokens) { score += 1f; checks++; }        // Hidden enemy pieces
         if (!rules.enableCurrency) { score += 0.5f; checks++; }        // Usually no currency
         if (rules.enableCombat) { score += 1f; checks++; }             // Combat mechanics
         if (rules.enableShipPlacement) { score += 1f; checks++; }      // Ship placement
@@ -157,7 +157,7 @@ public class CustomGameAnalyzer : MonoBehaviour
         // Dice Race characteristics
         if (!rules.enableCurrency) { score += 0.5f; checks++; }        // Simple, no currency
         if (!rules.separatePlayerBoards) { score += 1f; checks++; }    // Shared board
-        if (rules.canSeeEnemyTokens) { score += 1f; checks++; }        // All players visible
+        if (rules.CanSeeEnemyTokens) { score += 1f; checks++; }         // All players visible
         if (!rules.canPurchaseProperties) { score += 1f; checks++; }   // No properties
         if (!rules.enablePropertyTrading) { score += 1f; checks++; }   // No trading
         if (!rules.enableCombat) { score += 1f; checks++; }            // No combat
@@ -302,7 +302,7 @@ public class CustomGameAnalyzer : MonoBehaviour
         report += $"- Currency Enabled: {rules.enableCurrency}\n";
         report += $"- Starting Money: ${rules.startingMoney}\n";
         report += $"- Separate Boards: {rules.separatePlayerBoards}\n";
-        report += $"- Enemy Visibility: {rules.canSeeEnemyTokens}\n";
+        report += $"- Enemy Visibility: {rules.CanSeeEnemyTokens}\n";
         report += $"- Property Purchase: {rules.canPurchaseProperties}\n";
         report += $"- Property Trading: {rules.enablePropertyTrading}\n";
         report += $"- Combat: {rules.enableCombat}\n";
@@ -327,11 +327,6 @@ public class CustomGameAnalyzer : MonoBehaviour
         if (rules.enableCurrency && rules.startingMoney <= 0)
         {
             warnings.Add("Currency enabled but starting money is 0 or negative");
-        }
-
-        if (!rules.canSeeEnemyTokens && rules.enemyTokenVisibilityRange == 0)
-        {
-            warnings.Add("Enemy tokens completely hidden - this may cause gameplay issues");
         }
 
         if (rules.separatePlayerBoards && rules.enablePropertyTrading)

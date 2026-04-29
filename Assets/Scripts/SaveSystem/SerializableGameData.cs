@@ -93,10 +93,17 @@ public class SerializableGameRules
     // Combat System
     public bool enableCombat;
     public bool enableShipPlacement;
+    public int  combatRange;
+    public bool useHitPoints;
+    public int  defaultHitPoints;
+    public bool useDiceRollDamage;
+    public int  staticDamage;
+    public int  damageDiceCount;
+    public int  damageDiceSides;
+    public bool moveToDefeatedPosition;
 
-    // Visibility Settings
-    public bool canSeeEnemyTokens;
-    public int enemyTokenVisibilityRange;
+    // Visibility — derived from board config: tokens are hidden when separatePlayerBoards is true
+    // (no stored fields needed; use GameRules.CanSeeEnemyTokens computed property at runtime)
 
     // Player Settings
     public int minPlayers;
@@ -148,9 +155,16 @@ public class SerializableGameRules
 
         enableCombat = rules.enableCombat;
         enableShipPlacement = rules.enableShipPlacement;
+        combatRange = rules.combatRange;
+        useHitPoints = rules.useHitPoints;
+        defaultHitPoints = rules.defaultHitPoints;
+        useDiceRollDamage = rules.useDiceRollDamage;
+        staticDamage = rules.staticDamage;
+        damageDiceCount = rules.damageDiceCount;
+        damageDiceSides = rules.damageDiceSides;
+        moveToDefeatedPosition = rules.moveToDefeatedPosition;
 
-        canSeeEnemyTokens = rules.canSeeEnemyTokens;
-        enemyTokenVisibilityRange = rules.enemyTokenVisibilityRange;
+        // Visibility is now derived from separatePlayerBoards — no stored fields needed
 
         minPlayers = rules.minPlayers;
         maxPlayers = rules.maxPlayers;
@@ -200,9 +214,16 @@ public class SerializableGameRules
 
             enableCombat = enableCombat,
             enableShipPlacement = enableShipPlacement,
+            combatRange = combatRange,
+            useHitPoints = useHitPoints,
+            defaultHitPoints = defaultHitPoints,
+            useDiceRollDamage = useDiceRollDamage,
+            staticDamage = staticDamage,
+            damageDiceCount = damageDiceCount,
+            damageDiceSides = damageDiceSides,
+            moveToDefeatedPosition = moveToDefeatedPosition,
 
-            canSeeEnemyTokens = canSeeEnemyTokens,
-            enemyTokenVisibilityRange = enemyTokenVisibilityRange,
+            // canSeeEnemyTokens is now a derived property on GameRules (= !separatePlayerBoards)
 
             minPlayers = minPlayers,
             maxPlayers = maxPlayers,

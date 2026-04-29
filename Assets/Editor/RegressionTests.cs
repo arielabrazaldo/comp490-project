@@ -96,7 +96,7 @@ public class RegressionTests
         // Assert - Key Battleships features
         Assert.IsTrue(battleshipsRules.separatePlayerBoards,
             "REGRESSION: Battleships requires separate player boards.");
-        Assert.IsFalse(battleshipsRules.canSeeEnemyTokens,
+        Assert.IsFalse(battleshipsRules.CanSeeEnemyTokens,
             "REGRESSION: Battleships requires hidden enemy tokens.");
         Assert.IsTrue(battleshipsRules.enableCombat,
             "REGRESSION: Battleships requires combat system.");

@@ -316,7 +316,10 @@ public class SerializableBoardData
     
     // Tiles
     public List<SerializableTileData> tiles;
-    
+
+    // Player Tokens
+    public List<SerializableTokenData> tokens;
+
     // Player Start Positions
     public List<int> startTileIds;
     
@@ -349,10 +352,41 @@ public class SerializableBoardData
         tiles = new List<SerializableTileData>();
         startTileIds = new List<int> { 0 };
         tileGroups = new Dictionary<string, List<int>>();
+        tokens = new List<SerializableTokenData>();
         
         createdDate = DateTime.Now.ToString("o");
         lastModifiedDate = DateTime.Now.ToString("o");
         version = "1.0";
+    }
+}
+
+/// <summary>
+/// Represents a player token placed on the board, snapped to a tile.
+/// </summary>
+[Serializable]
+public class SerializableTokenData
+{
+    public int    tokenId;
+    public string tokenName;
+    public string color;       // hex, e.g. "#FF4444"
+    public string shape;       // "Rectangle", "Square", "Circle", "Hexagon"
+    public int    playerIndex; // which player owns this token (0-based)
+    public bool   isAssigned;  // false = in staging line, true = placed on a tile
+    public int    tileId;      // index of assigned tile; -1 when unassigned
+    public float  positionX;   // cached world position
+    public float  positionY;
+
+    public SerializableTokenData()
+    {
+        tokenId     = 0;
+        tokenName   = "Token 1";
+        color       = "#FF4444";
+        shape       = "Circle";
+        playerIndex = 0;
+        isAssigned  = false;
+        tileId      = -1;
+        positionX   = 0f;
+        positionY   = 0f;
     }
 }
 
