@@ -75,12 +75,16 @@ public class HybridUIManager : MonoBehaviour
     [Header("Game Messages")]
     [SerializeField] private TextMeshProUGUI gameMessagesText;
 
+    [Header("Combat Controls (shown only when enableCombat = true)")]
+    [SerializeField] private Button endTurnButton;
+
     [Header("Board (scene-level, not a UI panel)")]
     [SerializeField] private Transform hybridBoardParent;
 
     private bool isSubscribedToEvents = false;
     private bool isGameStarted = false;
     private GameRules activeRules;
+    private List<int> currentEnemiesInRange = new List<int>();
     private readonly List<GameObject> spawnedResourceTrackers = new List<GameObject>();
 
     // Player tokens — one per player, parented under hybridBoardParent
@@ -271,9 +275,77 @@ public class HybridUIManager : MonoBehaviour
             generatedBoardContainer = generated;
             Debug.Log($"[HybridUIManager] Board '{boardName}' generated successfully ({boardData.tiles.Count} tiles).");
             SpawnPlayerTokens(boardData);
+
+            // If rules say to show the enemy board, generate a greyed-out copy beside it
+            if (activeRules != null && activeRules.showEnemyBoard)
+                GenerateEnemyBoardPreview(boardData);
         }
         else
             Debug.LogError($"[HybridUIManager] BoardUIGenerator.GenerateBoard returned null for '{boardName}'.");
+    }
+
+    /// <summary>
+    /// Generates a read-only, greyed-out duplicate of the board positioned to the right of the
+    /// player's own board. Tile labels are hidden so the enemy layout is visible but gives nothing away.
+    /// </summary>
+    private void GenerateEnemyBoardPreview(SerializableBoardData boardData)
+    {
+        if (BoardUIGenerator.Instance == null || hybridBoardParent == null) return;
+
+        // Clone the board data and strip all label / colour information
+        SerializableBoardData blankData = new SerializableBoardData
+        {
+            boardName     = boardData.boardName + "_Enemy",
+            boardType     = boardData.boardType,
+            layoutPattern = boardData.layoutPattern,
+            boardWidth    = boardData.boardWidth,
+            boardHeight   = boardData.boardHeight,
+            tileSpacing   = boardData.tileSpacing,
+            tiles         = new System.Collections.Generic.List<SerializableTileData>(),
+            tokens        = new System.Collections.Generic.List<SerializableTokenData>(),
+        };
+
+        // Compute horizontal offset so the enemy board sits to the right with a small gap
+        float offsetX = boardData.boardWidth > 0 ? boardData.boardWidth + 40f : 860f;
+
+        foreach (SerializableTileData src in boardData.tiles)
+        {
+            blankData.tiles.Add(new SerializableTileData
+            {
+                tileId          = src.tileId,
+                tileName        = "",           // blank — reveals nothing
+                displayText     = "",
+                tileType        = "Normal",
+                shape           = src.shape,
+                width           = src.width,
+                height          = src.height,
+                positionX       = src.positionX + offsetX,
+                positionY       = src.positionY,
+                backgroundColor = "#B8B8B8",    // uniform grey
+                borderColor     = "#888888",
+                textColor       = "#B8B8B8",
+                fontSize        = src.fontSize,
+                isActive        = true,
+            });
+        }
+
+        GameObject enemyBoard = BoardUIGenerator.Instance.GenerateBoard(blankData, hybridBoardParent);
+        if (enemyBoard != null)
+        {
+            enemyBoard.name = "EnemyBoardPreview";
+
+            // Grey out every Image on every tile so it is visually muted
+            foreach (UnityEngine.UI.Image img in enemyBoard.GetComponentsInChildren<UnityEngine.UI.Image>())
+                img.color = new Color(0.72f, 0.72f, 0.72f, 0.85f);
+
+            // Remove all raycasting so it can never be clicked
+            foreach (UnityEngine.UI.Graphic g in enemyBoard.GetComponentsInChildren<UnityEngine.UI.Graphic>())
+                g.raycastTarget = false;
+
+            Debug.Log($"[HybridUIManager] Enemy board preview generated ({blankData.tiles.Count} tiles, offsetX={offsetX}).");
+        }
+        else
+            Debug.LogWarning("[HybridUIManager] Enemy board preview generation failed.");
     }
 
     /// <summary>
@@ -446,6 +518,25 @@ public class HybridUIManager : MonoBehaviour
             statsPanel.SetActive(anyRowActive);
             Debug.Log($"[HybridUIManager]   StatsPanel: {(anyRowActive ? "SHOWN" : "HIDDEN (all rows destroyed)")} ");
         }
+
+        // --- Combat buttons ---
+        if (!rules.enableCombat)
+        {
+            if (endTurnButton != null) { Destroy(endTurnButton.gameObject); endTurnButton = null; }
+            Debug.Log("[HybridUIManager]   Combat buttons: DESTROYED (combat disabled)");
+        }
+        else if (rules.combatRange == 0)
+        {
+            // Range 0: combat auto-resolves on landing — no manual end-turn needed
+            if (endTurnButton != null) { Destroy(endTurnButton.gameObject); endTurnButton = null; }
+            Debug.Log("[HybridUIManager]   Combat buttons: DESTROYED (auto-combat, range = 0)");
+        }
+        else
+        {
+            // Start non-interactive; activates after the player rolls and enemies are in range
+            if (endTurnButton != null) endTurnButton.interactable = false;
+            Debug.Log("[HybridUIManager]   Combat buttons: KEPT (combat enabled)");
+        }
     }
 
     /// <summary>
@@ -501,6 +592,7 @@ public class HybridUIManager : MonoBehaviour
         HybridGameManager.OnPlayerMoved += OnPlayerMoved;
         HybridGameManager.OnGameMessage += OnGameMessage;
         HybridGameManager.OnGameStateChanged += OnGameStateChanged;
+        HybridGameManager.OnCombatAvailable += OnCombatAvailable;
 
         isSubscribedToEvents = true;
         Debug.Log("[HybridUIManager] Subscribed to HybridGameManager events");
@@ -515,6 +607,7 @@ public class HybridUIManager : MonoBehaviour
         HybridGameManager.OnPlayerMoved -= OnPlayerMoved;
         HybridGameManager.OnGameMessage -= OnGameMessage;
         HybridGameManager.OnGameStateChanged -= OnGameStateChanged;
+        HybridGameManager.OnCombatAvailable -= OnCombatAvailable;
 
         isSubscribedToEvents = false;
         Debug.Log("[HybridUIManager] Unsubscribed from HybridGameManager events");
@@ -537,6 +630,7 @@ public class HybridUIManager : MonoBehaviour
         UpdateRollDiceButton();
         UpdateMoneyDisplay();
         RefreshPropertyList();
+        ResetCombatUI();
     }
 
     private void OnPlayerMoved(int playerId, int newPosition)
@@ -722,6 +816,7 @@ public class HybridUIManager : MonoBehaviour
         purchasePropertyButton?.onClick.AddListener(OnPurchasePropertyClicked);
         returnToMenuButton?.onClick.AddListener(OnReturnToMenuClicked);
         propertyDetailCloseButton?.onClick.AddListener(() => propertyDetailPopup?.SetActive(false));
+        endTurnButton?.onClick.AddListener(OnEndTurnClicked);
     }
 
     private void OnRollDiceClicked()
@@ -747,6 +842,115 @@ public class HybridUIManager : MonoBehaviour
         {
             Debug.LogWarning("[HybridUIManager] HybridPropertyModule not active");
         }
+    }
+
+    private void OnCombatAvailable(List<int> enemies)
+    {
+        // Only the local player whose turn it is acts on this
+        if (HybridGameManager.Instance == null || !HybridGameManager.Instance.IsMyTurn()) return;
+
+        currentEnemiesInRange = enemies;
+
+        // Roll button is locked until player resolves the combat phase
+        if (rollDiceButton != null) rollDiceButton.interactable = false;
+
+        if (endTurnButton != null) endTurnButton.interactable = true;
+
+        if (gameStatusText != null)
+            gameStatusText.text = enemies.Count > 0
+                ? $"{enemies.Count} enemy(ies) in range — click a highlighted token to attack, or end your turn!"
+                : "No enemies in range. End your turn.";
+
+        HighlightEnemyTokens(enemies);
+        Debug.Log($"[HybridUIManager] Combat phase: {enemies.Count} enemies in range — tokens made clickable");
+    }
+
+    private void OnEndTurnClicked()
+    {
+        HybridGameManager.Instance?.EndTurn();
+        ResetCombatUI();
+    }
+
+    /// <summary>
+    /// Adds a Button component to each enemy token so the player can click the token
+    /// directly on the board to attack. Tokens are tinted red as a visual cue.
+    /// </summary>
+    private void HighlightEnemyTokens(List<int> enemies)
+    {
+        ClearTokenInteractivity();
+
+        foreach (int enemyId in enemies)
+        {
+            if (enemyId < 0 || enemyId >= playerTokens.Count) continue;
+            GameObject token = playerTokens[enemyId];
+            if (token == null) continue;
+
+            // Tint the token red so the local player can see it is attackable
+            Image img = token.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = new Color(1f, 0.25f, 0.25f);
+                img.raycastTarget = true;
+            }
+
+            // The token has a nested Canvas (for sortingOrder). A nested Canvas requires
+            // its own GraphicRaycaster to receive pointer events.
+            if (token.GetComponent<GraphicRaycaster>() == null)
+                token.AddComponent<GraphicRaycaster>();
+
+            // Add a Button component dynamically
+            Button btn = token.GetComponent<Button>() ?? token.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.RemoveAllListeners();
+
+            int captured = enemyId;
+            btn.onClick.AddListener(() =>
+            {
+                HybridGameManager.Instance?.AttackPlayer(captured);
+                ResetCombatUI();
+                if (gameStatusText != null)
+                    gameStatusText.text = $"Attacked Player {captured + 1}!";
+                Debug.Log($"[HybridUIManager] Player clicked token — attacking player {captured}");
+            });
+        }
+    }
+
+    /// <summary>
+    /// Removes Button components added during combat and restores each token's original colour.
+    /// </summary>
+    private void ClearTokenInteractivity()
+    {
+        for (int i = 0; i < playerTokens.Count; i++)
+        {
+            GameObject token = playerTokens[i];
+            if (token == null) continue;
+
+            Button btn = token.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                Destroy(btn);
+            }
+
+            // Remove the GraphicRaycaster that was added during combat highlighting
+            GraphicRaycaster raycaster = token.GetComponent<GraphicRaycaster>();
+            if (raycaster != null)
+                Destroy(raycaster);
+
+            Image img = token.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = i < PlayerColours.Length ? PlayerColours[i] : Color.white;
+                img.raycastTarget = false;
+            }
+        }
+    }
+
+    private void ResetCombatUI()
+    {
+        currentEnemiesInRange.Clear();
+        if (endTurnButton != null) endTurnButton.interactable = false;
+        ClearTokenInteractivity();
     }
 
     private async void OnLeaveGameClicked()

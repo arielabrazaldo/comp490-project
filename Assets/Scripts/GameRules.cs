@@ -41,7 +41,7 @@ public class GameRules
     public bool enableShipPlacement = false;    // Enable ship placement phase (Battleships)
     // 0 = must land on opponent, 1 = adjacent tile, -1 = any tile (infinite)
     // Infinite is only valid when separatePlayerBoards=true AND enableCustomDice=false
-    public int  combatRange = 0;
+    public int  combatRange = 1;
     public bool useHitPoints = false;           // false = instant defeat
     public int  defaultHitPoints = 10;
     public bool useDiceRollDamage = false;      // false = static damage value
@@ -54,6 +54,9 @@ public class GameRules
     // Enemy token visibility is derived: tokens are hidden when separatePlayerBoards is true (Battleships-style).
     // Enemy boards are always visible when separatePlayerBoards is true so players can target them.
     public bool CanSeeEnemyTokens => !separatePlayerBoards;
+    // When true each player sees their own board AND a blank (layout-only) version of the enemy's board.
+    // Set by the board editor's "Show Enemy Board" toggle and saved with the game config.
+    public bool showEnemyBoard = false;
     
     [Header("Player Settings")]
     public int minPlayers = 2;
@@ -411,6 +414,7 @@ public class GameRules
             damageDiceCount = this.damageDiceCount,
             damageDiceSides = this.damageDiceSides,
             moveToDefeatedPosition = this.moveToDefeatedPosition,
+            showEnemyBoard = this.showEnemyBoard,
             minPlayers = this.minPlayers,
             maxPlayers = this.maxPlayers,
             winCondition = this.winCondition,
@@ -448,6 +452,7 @@ public class GameRules
 
         bool seeTokens = CanSeeEnemyTokens;
         summary += seeTokens ? "- Visibility: Enemy tokens visible (shared board)\n" : "- Visibility: Enemy tokens hidden, boards visible (separate boards)\n";
+        summary += $"- Show Enemy Board: {(showEnemyBoard ? "Yes (dual-board view)" : "No (own board only)")}\n";
         
         summary += $"- Players: {minPlayers}-{maxPlayers}\n";
         summary += $"- Win Condition: {winCondition}";

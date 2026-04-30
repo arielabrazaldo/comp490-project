@@ -330,6 +330,13 @@ public class SerializableBoardData
     public string createdDate;
     public string lastModifiedDate;
     public string version;
+
+    /// <summary>
+    /// When true the editor canvas splits 50/50: left = editable board,
+    /// right = blank read-only preview of the enemy board (same layout, greyed out).
+    /// Saved with the board JSON so the setting survives reloads.
+    /// </summary>
+    public bool showEnemyBoard;
     
     public SerializableBoardData()
     {

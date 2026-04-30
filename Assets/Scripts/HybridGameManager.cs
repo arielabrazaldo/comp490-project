@@ -66,6 +66,8 @@ public class HybridGameManager : NetworkBehaviour
     public static event System.Action<int, int> OnPlayerMoved;
     public static event System.Action<string> OnGameMessage;
     public static event System.Action<GameState> OnGameStateChanged;
+    /// <summary>Fired after movement when combat is enabled. Carries IDs of enemies in range (may be empty).</summary>
+    public static event System.Action<List<int>> OnCombatAvailable;
 
     #endregion
 
@@ -312,7 +314,33 @@ public class HybridGameManager : NetworkBehaviour
             return;
         }
 
-        // Next turn
+        // When combat is enabled, handle based on range setting
+        if (activeRules.enableCombat && combatModule != null)
+        {
+            List<int> enemies = combatModule.GetEnemiesInRange(
+                playerId, players[playerId].position, players, activeRules.combatRange);
+
+            if (activeRules.combatRange == 0)
+            {
+                // Range 0: auto-resolve combat immediately when landing on an occupied tile
+                foreach (int enemyId in enemies)
+                {
+                    combatModule.Attack(playerId, enemyId, players);
+                    if (CheckWinCondition(playerId)) { EndGame(playerId); return; }
+                }
+                // Notify clients that auto-combat resolved (UI shows result via OnGameMessage)
+                NotifyAutoCombatClientRpc(playerId, enemies.ToArray());
+                AdvanceTurn();
+                return;
+            }
+
+            // Range > 0: pause for player decision (attack a highlighted token or end turn)
+            OnCombatAvailable?.Invoke(enemies);
+            NotifyCombatAvailableClientRpc(enemies.ToArray());
+            return; // Turn advances via EndTurn() or AttackPlayer()
+        }
+
+        // Next turn (non-combat games)
         AdvanceTurn();
     }
 
@@ -341,6 +369,64 @@ public class HybridGameManager : NetworkBehaviour
             currencyModule.ProcessCurrencySpace(playerId, position, players);
         }
     }
+
+    /// <summary>
+    /// Manually end the current player's turn (used when combat is enabled).
+    /// </summary>
+    public void EndTurn()
+    {
+        if (!IsServer) { RequestEndTurnServerRpc(); return; }
+        AdvanceTurn();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestEndTurnServerRpc(ServerRpcParams rpcParams = default)
+    {
+        int senderId = (int)rpcParams.Receive.SenderClientId;
+        if (currentPlayerId.Value == senderId && gameState.Value == GameState.InProgress)
+            AdvanceTurn();
+    }
+
+    /// <summary>
+    /// Attack a specific opponent then end the turn.
+    /// </summary>
+    public void AttackPlayer(int targetId)
+    {
+        if (!IsServer) { RequestAttackServerRpc(targetId); return; }
+        int attackerId = currentPlayerId.Value;
+        if (combatModule != null)
+            combatModule.Attack(attackerId, targetId, players);
+        if (CheckWinCondition(attackerId)) { EndGame(attackerId); return; }
+        AdvanceTurn();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestAttackServerRpc(int targetId, ServerRpcParams rpcParams = default)
+    {
+        int attackerId = (int)rpcParams.Receive.SenderClientId;
+        if (currentPlayerId.Value == attackerId && gameState.Value == GameState.InProgress)
+        {
+            combatModule?.Attack(attackerId, targetId, players);
+            if (CheckWinCondition(attackerId)) { EndGame(attackerId); return; }
+            AdvanceTurn();
+        }
+    }
+
+    [ClientRpc]
+    private void NotifyCombatAvailableClientRpc(int[] enemyIds)
+    {
+        if (!IsServer) // Avoid double-firing on host
+            OnCombatAvailable?.Invoke(new List<int>(enemyIds));
+    }
+
+    [ClientRpc]
+    private void NotifyAutoCombatClientRpc(int attackerId, int[] defeatedIds)
+    {
+        // Game messages are already broadcast by HybridCombatModule.Attack via BroadcastGameMessage.
+        // This RPC exists so clients can react to auto-combat results if needed in the future.
+        Debug.Log($"[HybridGameManager] Auto-combat resolved: player {attackerId} vs {defeatedIds.Length} opponent(s)");
+    }
+
 
     /// <summary>
     /// Advance to next player's turn

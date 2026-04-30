@@ -25,6 +25,8 @@ public class RuleEditorUI : MonoBehaviour
     [Header("Board Settings")]
     [SerializeField] private Toggle separateBoardsToggle;
     [SerializeField] private TextMeshProUGUI boardModeLabel;
+    [SerializeField] private GameObject canSeeEnemyBoardPanel; // Container (label + toggle) for the enemy-board rule
+    [SerializeField] private Toggle showEnemyBoardToggle;      // Can see a blank preview of the enemy board
     
     [Header("Player Settings")]
     [SerializeField] private TMP_InputField minPlayersInput;
@@ -239,6 +241,9 @@ public class RuleEditorUI : MonoBehaviour
         if (hpDetailsPanel != null)
             hpDetailsPanel.SetActive(false);
 
+        if (canSeeEnemyBoardPanel != null)
+            canSeeEnemyBoardPanel.SetActive(false);
+
         
         // Hide shared overlay (selection, naming, confirmation panels)
         if (sharedOverlay != null)
@@ -278,6 +283,7 @@ public class RuleEditorUI : MonoBehaviour
         {
             separateBoardsToggle.onValueChanged.AddListener(OnSeparateBoardsChanged);
         }
+        showEnemyBoardToggle?.onValueChanged.AddListener(OnShowEnemyBoardRuleChanged);
         
         // Player settings
         if (minPlayersInput != null)
@@ -436,6 +442,8 @@ public class RuleEditorUI : MonoBehaviour
         // Ensure all toggles are active
         ActivateGameObject(currencyToggle);
         ActivateGameObject(separateBoardsToggle);
+        if (canSeeEnemyBoardPanel != null) canSeeEnemyBoardPanel.SetActive(true);
+        ActivateGameObject(showEnemyBoardToggle);
         ActivateGameObject(customDiceToggle);
         ActivateGameObject(duplicatesExtraTurnToggle);
         ActivateGameObject(resourcesToggle);
@@ -520,8 +528,12 @@ public class RuleEditorUI : MonoBehaviour
         {
             separateBoardsToggle.isOn = currentRules.separatePlayerBoards;
         }
-        
+        if (showEnemyBoardToggle != null)
+        {
+            showEnemyBoardToggle.isOn = currentRules.showEnemyBoard;
+        }
         UpdateBoardModeLabel();
+        UpdateCanSeeEnemyBoardPanel();
         
         // Player settings
         if (minPlayersInput != null)
@@ -701,8 +713,36 @@ public class RuleEditorUI : MonoBehaviour
         
         currentRules.separatePlayerBoards = value;
         UpdateBoardModeLabel();
+        UpdateCanSeeEnemyBoardPanel();
         UpdateCombatRangeDropdown();
         UpdateStatus(value ? "Separate player boards (Battleships-style)" : "Shared board (Monopoly-style)");
+    }
+
+    /// <summary>
+    /// Shows the "Can See Enemy Board" panel only when separate player boards is enabled,
+    /// since seeing an enemy board only makes sense when each player has their own board.
+    /// When hiding, also turns off showEnemyBoard to avoid stale state.
+    /// </summary>
+    private void UpdateCanSeeEnemyBoardPanel()
+    {
+        bool show = currentRules.separatePlayerBoards;
+        if (canSeeEnemyBoardPanel != null)
+            canSeeEnemyBoardPanel.SetActive(show);
+
+        // If separate boards is turned off, reset the dependent rule
+        if (!show)
+        {
+            currentRules.showEnemyBoard = false;
+            if (showEnemyBoardToggle != null)
+                showEnemyBoardToggle.SetIsOnWithoutNotify(false);
+        }
+    }
+
+    private void OnShowEnemyBoardRuleChanged(bool value)
+    {
+        if (isInitializing) return;
+        currentRules.showEnemyBoard = value;
+        UpdateStatus(value ? "Can See Enemy Board: ON — board editor will split in half" : "Can See Enemy Board: OFF");
     }
     
     private void OnMinPlayersChanged(string value)
@@ -1725,6 +1765,23 @@ public class RuleEditorUI : MonoBehaviour
     {
         currentRules.targetTileNumber = tileIndex;
     }
+
+    /// <summary>
+    /// Patches showEnemyBoard into currentRules without triggering the full OnRulesChanged
+    /// event chain. Called by BoardEditorUI when saving so the gameplay visibility setting
+    /// (set via the board editor toggle) is baked into the saved rules.
+    /// </summary>
+    public void PatchShowEnemyBoard(bool value)
+    {
+        currentRules.showEnemyBoard = value;
+    }
+
+    /// <summary>
+    /// Returns the current local value of showEnemyBoard from the rule editor's working copy.
+    /// Used by BoardEditorUI so it can read the rule before it has been formally applied
+    /// to RuleEditorManager (i.e. before the user clicks Apply).
+    /// </summary>
+    public bool GetShowEnemyBoard() => currentRules?.showEnemyBoard ?? false;
 
     /// <summary>
     /// Called by BoardEditorUI when a game is selected in the shared overlay.

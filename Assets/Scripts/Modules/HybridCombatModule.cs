@@ -65,31 +65,35 @@ public class HybridCombatModule : MonoBehaviour
     private void ProcessPvECombat(int playerId, List<HybridPlayerData> players)
     {
         InitializePlayerCombat(playerId);
-        
-        int damage = Random.Range(5, 20);
+
+        if (!rules.useHitPoints)
+        {
+            players[playerId].isActive = false;
+            playerCombatData[playerId].isAlive = false;
+            string defeatMsg = $"Player {playerId + 1} was defeated by an enemy encounter!";
+            Debug.Log($"[HybridCombatModule] {defeatMsg}");
+            HybridGameManager.Instance?.BroadcastGameMessage(defeatMsg);
+            return;
+        }
+
+        int damage = rules.useDiceRollDamage
+            ? RollDamage(rules.damageDiceCount, rules.damageDiceSides)
+            : rules.staticDamage;
+
         var combatData = playerCombatData[playerId];
-        
         combatData.health -= damage;
-        
+
         string message = $"Player {playerId + 1} encountered an enemy! Took {damage} damage (Health: {combatData.health}/{combatData.maxHealth})";
         Debug.Log($"[HybridCombatModule] {message}");
-        if (HybridGameManager.Instance != null)
-        {
-            HybridGameManager.Instance.BroadcastGameMessage(message);
-        }
-        
-        // Check if player is eliminated
+        HybridGameManager.Instance?.BroadcastGameMessage(message);
+
         if (combatData.health <= 0)
         {
             combatData.isAlive = false;
             players[playerId].isActive = false;
-            
             string eliminatedMessage = $"Player {playerId + 1} has been eliminated!";
             Debug.Log($"[HybridCombatModule] {eliminatedMessage}");
-            if (HybridGameManager.Instance != null)
-            {
-                HybridGameManager.Instance.BroadcastGameMessage(eliminatedMessage);
-            }
+            HybridGameManager.Instance?.BroadcastGameMessage(eliminatedMessage);
         }
     }
 
@@ -100,42 +104,44 @@ public class HybridCombatModule : MonoBehaviour
     private void ProcessPvPCombat(int attackerId, List<HybridPlayerData> players)
     {
         InitializePlayerCombat(attackerId);
-        
-        // Find nearest opponent
+
         int targetId = FindNearestOpponent(attackerId, players);
         if (targetId == -1)
         {
             Debug.Log($"[HybridCombatModule] No valid targets for player {attackerId}");
             return;
         }
-        
+
         InitializePlayerCombat(targetId);
-        
-        // Execute attack
-        int damage = Random.Range(10, 30);
+
+        if (!rules.useHitPoints)
+        {
+            players[targetId].isActive = false;
+            playerCombatData[targetId].isAlive = false;
+            string defeatMsg = $"Player {attackerId + 1} defeated Player {targetId + 1}!";
+            Debug.Log($"[HybridCombatModule] {defeatMsg}");
+            HybridGameManager.Instance?.BroadcastGameMessage(defeatMsg);
+            return;
+        }
+
+        int damage = rules.useDiceRollDamage
+            ? RollDamage(rules.damageDiceCount, rules.damageDiceSides)
+            : rules.staticDamage;
+
         var targetCombat = playerCombatData[targetId];
-        
         targetCombat.health -= damage;
-        
+
         string message = $"Player {attackerId + 1} attacked Player {targetId + 1} for {damage} damage! (Target Health: {targetCombat.health}/{targetCombat.maxHealth})";
         Debug.Log($"[HybridCombatModule] {message}");
-        if (HybridGameManager.Instance != null)
-        {
-            HybridGameManager.Instance.BroadcastGameMessage(message);
-        }
-        
-        // Check if target is eliminated
+        HybridGameManager.Instance?.BroadcastGameMessage(message);
+
         if (targetCombat.health <= 0)
         {
             targetCombat.isAlive = false;
             players[targetId].isActive = false;
-            
             string eliminatedMessage = $"Player {targetId + 1} has been eliminated by Player {attackerId + 1}!";
             Debug.Log($"[HybridCombatModule] {eliminatedMessage}");
-            if (HybridGameManager.Instance != null)
-            {
-                HybridGameManager.Instance.BroadcastGameMessage(eliminatedMessage);
-            }
+            HybridGameManager.Instance?.BroadcastGameMessage(eliminatedMessage);
         }
     }
 
@@ -173,32 +179,54 @@ public class HybridCombatModule : MonoBehaviour
             Debug.LogWarning($"[HybridCombatModule] Target {targetId} is not active");
             return false;
         }
-        
+
         InitializePlayerCombat(attackerId);
         InitializePlayerCombat(targetId);
-        
-        // Calculate damage
-        int damage = Random.Range(15, 35);
-        var targetCombat = playerCombatData[targetId];
-        
-        targetCombat.health -= damage;
-        
-        string message = $"Player {attackerId + 1} attacked Player {targetId + 1} for {damage} damage!";
-        Debug.Log($"[HybridCombatModule] {message}");
-        if (HybridGameManager.Instance != null)
+
+        // Instant-defeat: skip damage calculation entirely
+        if (!rules.useHitPoints)
         {
-            HybridGameManager.Instance.BroadcastGameMessage(message);
+            players[targetId].isActive = false;
+            playerCombatData[targetId].isAlive = false;
+            string defeatMsg = $"Player {attackerId + 1} defeated Player {targetId + 1}!";
+            Debug.Log($"[HybridCombatModule] {defeatMsg}");
+            HybridGameManager.Instance?.BroadcastGameMessage(defeatMsg);
+            return true;
         }
-        
+
+        // Calculate damage according to rules
+        int damage = rules.useDiceRollDamage
+            ? RollDamage(rules.damageDiceCount, rules.damageDiceSides)
+            : rules.staticDamage;
+
+        var targetCombat = playerCombatData[targetId];
+        targetCombat.health -= damage;
+
+        string message = $"Player {attackerId + 1} attacked Player {targetId + 1} for {damage} damage! " +
+                         $"(Health: {targetCombat.health}/{targetCombat.maxHealth})";
+        Debug.Log($"[HybridCombatModule] {message}");
+        HybridGameManager.Instance?.BroadcastGameMessage(message);
+
         // Check elimination
         if (targetCombat.health <= 0)
         {
             targetCombat.isAlive = false;
             players[targetId].isActive = false;
-            return true; // Target eliminated
+            return true;
         }
-        
+
         return false;
+    }
+
+    /// <summary>
+    /// Rolls damage dice and returns the total.
+    /// </summary>
+    private int RollDamage(int diceCount, int diceSides)
+    {
+        int total = 0;
+        for (int i = 0; i < diceCount; i++)
+            total += Random.Range(1, diceSides + 1);
+        return total;
     }
 
     /// <summary>
@@ -217,6 +245,23 @@ public class HybridCombatModule : MonoBehaviour
         {
             HybridGameManager.Instance.BroadcastGameMessage(message);
         }
+    }
+
+    /// <summary>
+    /// Returns list of player IDs that are within combat range of the attacker.
+    /// combatRange: 0 = same tile, 1 = adjacent, -1 = infinite.
+    /// </summary>
+    public List<int> GetEnemiesInRange(int attackerId, int attackerPosition, List<HybridPlayerData> players, int combatRange)
+    {
+        List<int> enemies = new List<int>();
+        for (int i = 0; i < players.Count; i++)
+        {
+            if (i == attackerId || !players[i].isActive) continue;
+            int distance = Mathf.Abs(players[i].position - attackerPosition);
+            bool inRange = combatRange == -1 || distance <= combatRange;
+            if (inRange) enemies.Add(i);
+        }
+        return enemies;
     }
 
     /// <summary>

@@ -19,7 +19,7 @@ public class TileDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     public bool WasDragged { get; set; }
     private const float DragThreshold = 5f;
 
-    private static readonly Vector2 CanvasSize = new Vector2(1575f, 950f);
+    private static readonly Vector2 FallbackCanvasSize = new Vector2(1575f, 950f);
 
     private RectTransform rectTransform;
     private RectTransform parentRect;
@@ -57,7 +57,12 @@ public class TileDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandler, I
             parentRect, eventData.position, GetCamera(eventData), out Vector2 localPoint);
 
         Vector2 halfTile   = rectTransform.sizeDelta * 0.5f;
-        Vector2 halfCanvas = CanvasSize * 0.5f;
+        // Use the actual parent rect size so drag boundaries respect the current canvas
+        // dimensions (e.g. half-width when dual-board preview is active).
+        Vector2 boundsSize = (parentRect != null && parentRect.rect.size.sqrMagnitude > 0f)
+            ? parentRect.rect.size
+            : FallbackCanvasSize;
+        Vector2 halfCanvas = boundsSize * 0.5f;
         Vector2 minPos     = -halfCanvas + halfTile;
         Vector2 maxPos     =  halfCanvas - halfTile;
 
