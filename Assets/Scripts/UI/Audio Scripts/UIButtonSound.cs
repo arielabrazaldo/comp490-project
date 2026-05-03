@@ -10,6 +10,7 @@ public class UIButtonSound : MonoBehaviour
     [SerializeField] private AudioClip resetClip;
     [SerializeField] private AudioClip boardEditorClip;
     [SerializeField] private AudioClip ruleEditorClip;
+    [SerializeField] private AudioClip duplicateClip;
 
     // button press sound
     public void PlayClick()
@@ -52,6 +53,13 @@ public class UIButtonSound : MonoBehaviour
             audioSource.PlayOneShot(resetClip);
     }
 
+    // open rule editor sound
+    public void RuleEditor()
+    {
+        if (audioSource != null && ruleEditorClip != null)
+            audioSource.PlayOneShot(ruleEditorClip);
+    }
+
     // open board editor sound
     public void BoardEditor()
     {
@@ -59,11 +67,10 @@ public class UIButtonSound : MonoBehaviour
             audioSource.PlayOneShot(boardEditorClip);
     }
 
-    // open rule editor sound
-    public void RuleEditor()
+    public void Duplicate()
     {
-        if (audioSource != null && ruleEditorClip != null)
-            audioSource.PlayOneShot(ruleEditorClip);
+        if (audioSource != null && duplicateClip != null)
+            audioSource.PlayOneShot(duplicateClip);
     }
 
 }
