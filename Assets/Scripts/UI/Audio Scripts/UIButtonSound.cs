@@ -11,6 +11,7 @@ public class UIButtonSound : MonoBehaviour
     [SerializeField] private AudioClip boardEditorClip;
     [SerializeField] private AudioClip ruleEditorClip;
     [SerializeField] private AudioClip duplicateClip;
+    [SerializeField] private AudioClip successfulClip;
 
     // button press sound
     public void PlayClick()
@@ -45,6 +46,13 @@ public class UIButtonSound : MonoBehaviour
      *  Board Editor/Rule Editor Sounds
      *  
      */
+
+    // save game success sound
+    public void saveSuccess()
+    {
+        if (audioSource != null && ruleEditorClip != null)
+            audioSource.PlayOneShot(successfulClip);
+    }
 
     // reset button sound
     public void Reset()
