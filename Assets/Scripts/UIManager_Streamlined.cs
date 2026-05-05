@@ -133,10 +133,12 @@ public class UIManager_Streamlined : MonoBehaviour
 
     private void OnDestroy()
     {
-        // Unsubscribe from lobby events
-        if (LobbyManager.Instance != null)
+        // Use FindFirstObjectByType instead of Instance to avoid auto-creating a new
+        // LobbyManager during scene teardown, which causes a leaked-GameObject warning.
+        LobbyManager lobbyManager = Object.FindFirstObjectByType<LobbyManager>();
+        if (lobbyManager != null)
         {
-            LobbyManager.Instance.OnPlayersChanged -= OnLobbyPlayersChanged;
+            lobbyManager.OnPlayersChanged -= OnLobbyPlayersChanged;
         }
     }
     

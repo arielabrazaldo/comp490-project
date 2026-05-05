@@ -296,7 +296,12 @@ public class LobbyManager : MonoBehaviour
             }
             catch (LobbyServiceException e)
             {
-                Debug.LogError($"Error leaving lobby: {e.Message} (Reason: {e.Reason})");
+                // LobbyNotFound is expected — the lobby is destroyed server-side when a
+                // match starts. Treat it as a clean leave rather than an error.
+                if (e.Reason == LobbyExceptionReason.LobbyNotFound)
+                    Debug.Log("Lobby already closed server-side — skipping leave.");
+                else
+                    Debug.LogError($"Error leaving lobby: {e.Message} (Reason: {e.Reason})");
             }
             finally
             {

@@ -956,7 +956,11 @@ public class HybridUIManager : MonoBehaviour
     private async void OnLeaveGameClicked()
     {
         HideAndCleanup();
-        await LobbyManager.Instance.LeaveLobby();
+
+        // Guard: LobbyManager.Instance auto-creates if null, which causes a leaked
+        // GameObject warning if called during scene teardown.
+        if (LobbyManager.Instance != null)
+            await LobbyManager.Instance.LeaveLobby();
 
         if (UIManager_Streamlined.Instance != null)
             UIManager_Streamlined.Instance.ShowMainMenuPublic();

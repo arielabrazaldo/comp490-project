@@ -582,7 +582,11 @@ public class HybridGameManager : NetworkBehaviour
     [ClientRpc]
     private void AnnounceWinnerClientRpc(int winnerId, string message)
     {
-        if (!IsServer) OnGameMessage?.Invoke(message);
+        if (!IsServer)
+        {
+            OnGameMessage?.Invoke(message);
+            OnGameStateChanged?.Invoke(GameState.GameOver);
+        }
         Debug.Log($"[HybridGameManager] {message}");
     }
 

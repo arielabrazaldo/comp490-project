@@ -111,9 +111,12 @@ public class BoardUIGenerator : MonoBehaviour
         boardRect.anchorMax = new Vector2(0.5f, 0.5f);
         boardRect.pivot = new Vector2(0.5f, 0.5f);
         
-        // Add background
+        // Add background - transparent so the scene background shows through.
+        // The individual tiles carry their own colours; the container should never
+        // paint a solid rectangle over the rest of the UI.
         Image boardBackground = boardContainer.AddComponent<Image>();
-        boardBackground.color = SerializableTileData.HexToColor(boardData.backgroundColor);
+        boardBackground.color = new Color(0f, 0f, 0f, 0f);
+        boardBackground.raycastTarget = false;
         
         // Generate tiles
         generatedTiles.Clear();
