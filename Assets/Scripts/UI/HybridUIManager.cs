@@ -134,11 +134,12 @@ public class HybridUIManager : MonoBehaviour
 
     private void OnGameStartedHandler()
     {
-        // Only act if the game panel isn't already showing (avoids double-init on host)
-        if (hybridGamePanel != null && !hybridGamePanel.activeSelf)
+        // Guard on isGameStarted rather than panel visibility — panel state is unreliable
+        // mid-transition and would silently block StartGame() on the second game in a session,
+        // preventing SubscribeToEvents() from being called and locking the client's roll button.
+        if (!isGameStarted)
         {
             Debug.Log("[HybridUIManager] OnGameStarted received — starting UI (client path)");
-            // Hide lobby and other navigation panels that the client still has open
             UIManager_Streamlined.Instance?.HideAllPanelsPublic();
             StartGame();
         }

@@ -9099,7 +9099,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &255355970
 RectTransform:
   m_ObjectHideFlags: 0
@@ -28906,7 +28906,7 @@ MonoBehaviour:
   boardEditorPanel: {fileID: 905104307}
   closeButton: {fileID: 714028166}
   goToRuleEditorButton: {fileID: 1250712474}
-  selectExistingGameButton: {fileID: 0}
+  selectExistingGameButton: {fileID: 1733820637}
   sharedOverlay: {fileID: 255355973}
   shapePickerPanel: {fileID: 1088531421}
   shapeCard_Monopoly: {fileID: 1641460982}
@@ -50836,6 +50836,7 @@ GameObject:
   - component: {fileID: 1510171387}
   - component: {fileID: 1510171389}
   - component: {fileID: 1510171388}
+  - component: {fileID: 1510171390}
   m_Layer: 0
   m_Name: MoveToRow
   m_TagString: Untagged
@@ -50879,7 +50880,7 @@ MonoBehaviour:
   m_IgnoreLayout: 0
   m_MinWidth: -1
   m_MinHeight: -1
-  m_PreferredWidth: -1
+  m_PreferredWidth: 50
   m_PreferredHeight: 40
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
@@ -50910,6 +50911,20 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &1510171390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510171386}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 0
 --- !u!1 &1511628678
 GameObject:
   m_ObjectHideFlags: 0
@@ -53769,7 +53784,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Move To Defeated Enemy Toggle
+  m_text: Move To Defeated Enemy
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 17f68fc6f4db82742adde35eaa03b44f, type: 2}
   m_sharedMaterial: {fileID: -2549395165210752463, guid: 17f68fc6f4db82742adde35eaa03b44f, type: 2}
@@ -76349,6 +76364,7 @@ GameObject:
   - component: {fileID: 8527854034575016359}
   - component: {fileID: 8527854034575016361}
   - component: {fileID: 8527854034575016362}
+  - component: {fileID: 8527854034575016363}
   m_Layer: 0
   m_Name: CombatPanel
   m_TagString: Untagged
@@ -77308,7 +77324,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 10
+  m_Spacing: 20
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 0
@@ -81639,6 +81655,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &8527854034575016363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1898562393664842948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!114 &8545990642443666499
 MonoBehaviour:
   m_ObjectHideFlags: 0
