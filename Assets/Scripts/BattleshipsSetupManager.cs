@@ -35,6 +35,7 @@ public class BattleshipsSetupManager : MonoBehaviour
     [SerializeField] private GameObject gridTilePrefab;
     [SerializeField] private GameObject inputFieldsContainer;
     [SerializeField] private Button backFromCustomizeButton;
+    [SerializeField] private GameObject setupConfigPanel;
 
     [Header("Configuration")]
     private int battleshipsPlayerCount = 2;
@@ -107,6 +108,7 @@ public class BattleshipsSetupManager : MonoBehaviour
         if (gridTilePrefab == null) Debug.LogError("GridTilePrefab is not assigned!");
         if (inputFieldsContainer == null) Debug.LogError("InputFieldsContainer is not assigned!");
         if (backFromCustomizeButton == null) Debug.LogError("BackFromCustomizeButton is not assigned!");
+        if (setupConfigPanel == null) Debug.LogError("SetupConfigPanel is not assigned!");
     }
 
     /// <summary>
@@ -443,71 +445,53 @@ public class BattleshipsSetupManager : MonoBehaviour
         gridTiles.Clear();
         tileStates = null;
     }
-    
+
     private void ShowInputFields()
     {
-        if (inputFieldsContainer != null)
+        if (setupConfigPanel != null)
         {
-            inputFieldsContainer.SetActive(true);
+            setupConfigPanel.SetActive(true);
         }
-        
+
         if (gridContainer != null)
         {
             gridContainer.SetActive(false);
         }
-        
-        if (customizeButton != null)
-        {
-            customizeButton.gameObject.SetActive(true);
-        }
-        
-        // Back button should be outside GridContainer and controlled separately
+
         if (backFromCustomizeButton != null)
         {
             backFromCustomizeButton.gameObject.SetActive(false);
         }
-        
+
         if (createBattleshipsLobbyButton != null)
         {
             createBattleshipsLobbyButton.gameObject.SetActive(true);
         }
     }
-    
+
     private void ShowGrid()
     {
-        if (inputFieldsContainer != null)
+        if (setupConfigPanel != null)
         {
-            inputFieldsContainer.SetActive(false);
+            setupConfigPanel.SetActive(false);
         }
-        
+
         if (gridContainer != null)
         {
             gridContainer.SetActive(true);
+            gridContainer.transform.SetAsLastSibling();
         }
-        
-        if (customizeButton != null)
-        {
-            customizeButton.gameObject.SetActive(false);
-        }
-        
-        // Back button should be outside GridContainer and controlled separately
+
         if (backFromCustomizeButton != null)
         {
-            // Make sure it's active and positioned correctly
             backFromCustomizeButton.gameObject.SetActive(true);
-            
-            // Ensure it's not affected by GridLayoutGroup
-            LayoutElement layoutElement = backFromCustomizeButton.GetComponent<LayoutElement>();
-            if (layoutElement == null)
-            {
-                layoutElement = backFromCustomizeButton.gameObject.AddComponent<LayoutElement>();
-            }
-            layoutElement.ignoreLayout = true; // This will prevent layout groups from affecting it
+            backFromCustomizeButton.transform.SetAsLastSibling();
         }
-        
+
         if (createBattleshipsLobbyButton != null)
         {
             createBattleshipsLobbyButton.gameObject.SetActive(true);
+            createBattleshipsLobbyButton.transform.SetAsLastSibling();
         }
     }
 
