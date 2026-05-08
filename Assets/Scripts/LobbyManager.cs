@@ -34,12 +34,20 @@ public class LobbyManager : MonoBehaviour
 
     // Events for UI feedback
     public System.Action<string> OnStatusUpdate;
+    public System.Action OnPlayersChanged; // Event fired when player list changes
 
     private void Awake()
     {
         if (instance == null)
         {
             instance = this;
+            
+            // CRITICAL FIX: DontDestroyOnLoad only works for root GameObjects
+            // Unparent the GameObject first if it has a parent
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
         }
         else
@@ -84,7 +92,16 @@ public class LobbyManager : MonoBehaviour
     {
         try
         {
+            int oldPlayerCount = currentLobby?.Players?.Count ?? 0;
             currentLobby = await LobbyService.Instance.GetLobbyAsync(currentLobby.Id);
+            int newPlayerCount = currentLobby?.Players?.Count ?? 0;
+            
+            // Notify UI if player count changed
+            if (newPlayerCount != oldPlayerCount)
+            {
+                Debug.Log($"[LobbyManager] Player count changed: {oldPlayerCount} -> {newPlayerCount}");
+                OnPlayersChanged?.Invoke();
+            }
         }
         catch (LobbyServiceException e)
         {
@@ -279,7 +296,12 @@ public class LobbyManager : MonoBehaviour
             }
             catch (LobbyServiceException e)
             {
-                Debug.LogError($"Error leaving lobby: {e.Message} (Reason: {e.Reason})");
+                // LobbyNotFound is expected — the lobby is destroyed server-side when a
+                // match starts. Treat it as a clean leave rather than an error.
+                if (e.Reason == LobbyExceptionReason.LobbyNotFound)
+                    Debug.Log("Lobby already closed server-side — skipping leave.");
+                else
+                    Debug.LogError($"Error leaving lobby: {e.Message} (Reason: {e.Reason})");
             }
             finally
             {
