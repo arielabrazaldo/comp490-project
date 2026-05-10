@@ -57,23 +57,23 @@ Configure every aspect of your game through a live UI panel:
 
 
 Assets/
-├── Scripts/
-│   ├── GameRules.cs                  # Core rule data model & presets
-│   ├── RuleEditorUI.cs               # Rule Editor UI component
-│   ├── RuleEditorManager.cs          # Rule Editor singleton manager
-│   ├── BoardEditorUI.cs              # Board Editor UI component
-│   ├── HybridGameManager.cs          # Main game orchestrator
-│   ├── Modules/                      # Pluggable gameplay modules
-│   ├── SaveSystem/                   # JSON save/load utilities
-│   ├── UI/                           # Shared UI components & managers
-│   ├── Utilities/                    # Diagnostics and helpers
-│   └── Examples/                     # Usage examples
-├── Editor/
-│   ├── RuleEditorTests.cs
-│   ├── EditModeTests.asmdef
-│   └── ...                           # Additional editor tests
-└── Tests/
-    └── GameSaveManagerTests.cs
+<br>├── Scripts/
+<br>│   ├── GameRules.cs                  # Core rule data model & presets
+<br>│   ├── RuleEditorUI.cs               # Rule Editor UI component
+<br>│   ├── RuleEditorManager.cs          # Rule Editor singleton manager
+<br>│   ├── BoardEditorUI.cs              # Board Editor UI component
+<br>│   ├── HybridGameManager.cs          # Main game orchestrator
+<br>│   ├── Modules/                      # Pluggable gameplay modules
+<br>│   ├── SaveSystem/                   # JSON save/load utilities
+<br>│   ├── UI/                           # Shared UI components & managers
+<br>│   ├── Utilities/                    # Diagnostics and helpers
+<br>│   └── Examples/                     # Usage examples
+<br>├── Editor/
+<br>│   ├── RuleEditorTests.cs
+<br>│   ├── EditModeTests.asmdef
+<br>│   └── ...                           # Additional editor tests
+<br>└── Tests/
+<br>    └── GameSaveManagerTests.cs
 
 
 ---
